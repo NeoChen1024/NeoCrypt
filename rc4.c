@@ -219,7 +219,7 @@ int main(int argc, char **argv)
 				verbose++;
 				break;
 			case 'h': /* Help */
-				printf("Usage: %s [-h] [-i infile] [-o outfile] [-k key] [-s str] [-x hex] [-v]\n", argv[0]);
+				printf("Usage: %s [-h] [-a] [-f] [-i infile] [-o outfile] [-k key] [-s instr] [-x hex] [-v]\n", argv[0]);
 				exit(0);
 			default:
 				fputs("?INVARG\n", stderr);
