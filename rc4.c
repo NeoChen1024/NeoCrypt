@@ -53,12 +53,15 @@ uint8_t status=0;
 #define ST_IN_MASK	0x04
 #define ST_INSTR_MASK	0x08
 #define ST_OUT_MASK	0x10
+#define ST_OUTHEX_MASK	0x20
+#define ST_INHEX_MASK	0x40
 
 #define ST_KEY		(status & ST_KEY_MASK)
 #define ST_KEYHEX	(status & ST_KEYHEX_MASK)
 #define ST_IN		(status & ST_IN_MASK)
 #define ST_INSTR	(status & ST_INSTR_MASK)
 #define ST_OUT		(status & ST_OUT_MASK)
+#define ST_OUTHEX	(status & ST_OUTHEX_MASK)
 
 void swap(uint8_t *a, uint8_t *b)
 {
@@ -93,24 +96,24 @@ uint8_t prga(uint8_t *sbox, uint8_t input)
 	return output;
 }
 
-void hex2key(char *text, uint8_t *key)
+void hex2str(char *hex, size_t *strlength, uint8_t *str)
 {
-	size_t length=0;
-	unsigned int ptr=0;
-	unsigned int keyptr=0;
+	int length=0;
+	int ptr=0;
+	int strptr=0;
 	uint8_t value=0;
-	if((length = strlen(text)) == 0)
+	if((length = strlen(hex)) == 0)
 	{
 		fputs("?HEX\n", stderr);
 		exit(4);
 	}
 	while((length - ptr) > 0)
 	{
-		sscanf(text + ptr, "%2hhx", &value);
-		key[keyptr++] = value;
+		sscanf(hex + ptr, "%2hhx", &value);
+		str[strptr++] = value;
 		ptr+=2;
 	}
-	keylength=keyptr;
+	(*strlength)=strptr;
 }
 
 int main(int argc, char **argv)
@@ -121,7 +124,7 @@ int main(int argc, char **argv)
 	int ret=0;
 	size_t ptr=0;
 	int opt;
-	while((opt = getopt(argc, argv, "hs:i:o:k:x:v")) != -1)
+	while((opt = getopt(argc, argv, "hs:i:ao:k:x:f:v")) != -1)
 	{
 		switch(opt)
 		{
@@ -149,6 +152,15 @@ int main(int argc, char **argv)
 				strcpy(str, optarg);
 				status |= ST_INSTR_MASK;
 				break;
+			case 'f':
+				strlength = strlen(optarg);
+				str = calloc((strlength / 2) + (strlength % 2) + 1, sizeof(char));
+				hex2str(optarg, &strlength, (uint8_t *)str);
+				status |= ST_INSTR_MASK;
+				break;
+			case 'a':
+				status |= ST_OUTHEX_MASK;
+				break;
 			case 'o':
 				if(strcmp(optarg, "-"))
 				{
@@ -173,7 +185,7 @@ int main(int argc, char **argv)
 				status |= ST_KEY_MASK;
 				break;
 			case 'x':
-				hex2key(optarg, key);
+				hex2str(optarg, &keylength, key);
 				status |= ST_KEYHEX_MASK;
 				break;
 			case 'v':
@@ -197,34 +209,43 @@ int main(int argc, char **argv)
 
 	ksa(sbox, key, keylength);
 
-	int count=0;
+	size_t count=0;
 	if(verbose)
 	{
 		for(count=0; count < 256; count++)
 		{
-			fprintf(stderr, "S[0x%02x]=0x%02x ", count, sbox[count]);
+			fprintf(stderr, "S[0x%02zx]=0x%02x ", count, sbox[count]);
 			if((count & 0x07)  == 7)
 				fputc('\n', stderr);
 		}
 		fprintf(stderr, "KEY = \"%s\\0\"\n", key);
 	}
 
-	if(status & ST_IN_MASK)
+	if(ST_IN)
 	{
 		while((input = fgetc(infile)) != EOF && ret != EOF)
 		{
-			ret = fputc(prga(sbox, (char)input), outfile);
+			if(ST_OUTHEX)
+				fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
+			else
+				ret = fputc(prga(sbox, (uint8_t)input), outfile);
 		}
 		fclose(infile);
 	}
-	else if(status & ST_INSTR_MASK)
+	else if(ST_INSTR)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			ret = fputc(prga(sbox, str[ptr]), outfile);
+			if(ST_OUTHEX)
+				ret = fprintf(outfile, "%02x", prga(sbox, str[ptr]));
+			else
+				ret = fputc(prga(sbox, str[ptr]), outfile);
 			ptr++;
 		}
 	}
+
+	if(ST_OUTHEX)
+		fputc('\n', outfile);
 
 	fclose(outfile);
 }
