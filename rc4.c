@@ -62,6 +62,7 @@ uint8_t status=0;
 #define ST_INSTR	(status & ST_INSTR_MASK)
 #define ST_OUT		(status & ST_OUT_MASK)
 #define ST_OUTHEX	(status & ST_OUTHEX_MASK)
+#define ST_INHEX	(status & ST_INHEX_MASK)
 
 void swap(uint8_t *a, uint8_t *b)
 {
@@ -116,6 +117,26 @@ void hex2str(char *hex, size_t *strlength, uint8_t *str)
 	(*strlength)=strptr;
 }
 
+int fgethex(FILE *fp)
+{
+	char hexbuffer[3]={0,0,0};
+	int c=0;
+	int ret=0;
+
+	if((c = fgetc(fp)) != EOF)
+		hexbuffer[0]=(char)c;
+	else
+		return EOF;
+
+	if((c = fgetc(fp)) != EOF)
+		hexbuffer[1]=(char)c;
+	else
+		hexbuffer[1]=0;
+
+	sscanf(hexbuffer, "%2x", &ret);
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	setvbuf(stderr, NULL, _IONBF, 0);
@@ -124,7 +145,7 @@ int main(int argc, char **argv)
 	int ret=0;
 	size_t ptr=0;
 	int opt;
-	while((opt = getopt(argc, argv, "hs:i:ao:k:x:f:v")) != -1)
+	while((opt = getopt(argc, argv, "hs:fi:ao:k:x:v")) != -1)
 	{
 		switch(opt)
 		{
@@ -143,20 +164,26 @@ int main(int argc, char **argv)
 				break;
 			case 's':
 				strlength = strlen(optarg);
-				if(strlength == 0)
+				if(ST_INHEX)
 				{
-					fputs("?STR\n", stderr);
-					exit(2);
+					str = calloc((strlength / 2) + (strlength % 2) + 1, sizeof(char));
+					hex2str(optarg, &strlength, (uint8_t *)str);
+					strlength = strlen(optarg);
 				}
-				str = calloc(strlength, sizeof(char));
-				strcpy(str, optarg);
-				status |= ST_INSTR_MASK;
+				else
+				{
+					if(strlength == 0)
+					{
+						fputs("?STR\n", stderr);
+						exit(2);
+					}
+					str = calloc(strlength, sizeof(char));
+					strcpy(str, optarg);
+					status |= ST_INSTR_MASK;
+				}
 				break;
 			case 'f':
-				strlength = strlen(optarg);
-				str = calloc((strlength / 2) + (strlength % 2) + 1, sizeof(char));
-				hex2str(optarg, &strlength, (uint8_t *)str);
-				status |= ST_INSTR_MASK;
+				status |= ST_INHEX_MASK;
 				break;
 			case 'a':
 				status |= ST_OUTHEX_MASK;
@@ -223,12 +250,25 @@ int main(int argc, char **argv)
 
 	if(ST_IN)
 	{
-		while((input = fgetc(infile)) != EOF && ret != EOF)
+		if(ST_INHEX)
 		{
-			if(ST_OUTHEX)
-				fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
-			else
-				ret = fputc(prga(sbox, (uint8_t)input), outfile);
+			while((input = fgethex(infile)) != EOF && ret != EOF)
+			{
+				if(ST_OUTHEX)
+					fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
+				else
+					ret = fputc(prga(sbox, (uint8_t)input), outfile);
+			}
+		}
+		else
+		{
+			while((input = fgetc(infile)) != EOF && ret != EOF)
+			{
+				if(ST_OUTHEX)
+					fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
+				else
+					ret = fputc(prga(sbox, (uint8_t)input), outfile);
+			}
 		}
 		fclose(infile);
 	}
