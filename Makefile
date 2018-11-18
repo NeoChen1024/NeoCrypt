@@ -1,6 +1,6 @@
 CC	= cc
 CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC -ansi -std=c99
-EXE	= arc4
+EXE	= rc4
 
 all: ${EXE}
 arc4:
