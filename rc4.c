@@ -279,7 +279,14 @@ int main(int argc, char **argv)
 					}
 				}
 				else
+				{
 					pwfile=stdin;
+					if(infile == stdin)
+					{
+						fputs("?PWDIN\n", stderr);
+						exit(4);
+					}
+				}
 				if(opt_hex)
 				{
 					if(pwfile == stdin)
