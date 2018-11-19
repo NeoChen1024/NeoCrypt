@@ -1,33 +1,33 @@
-/* ==================================== *
- *        ARC4 Implemention in C        *
- *               Neo_Chen               *
- * ==================================== */
+/* ========================================================================== *\
+ *                            RC4 Implementation in C                         *
+ *                                   Neo_Chen                                 *
+\* ========================================================================== */
 
 /* ========================================================================== *\
-   This is free and unencumbered software released into the public domain.
-
-   Anyone is free to copy, modify, publish, use, compile, sell, or
-   distribute this software, either in source code form or as a compiled
-   binary, for any purpose, commercial or non-commercial, and by any
-   means.
-
-   In jurisdictions that recognize copyright laws, the author or authors
-   of this software dedicate any and all copyright interest in the
-   software to the public domain. We make this dedication for the benefit
-   of the public at large and to the detriment of our heirs and
-   successors. We intend this dedication to be an overt act of
-   relinquishment in perpetuity of all present and future rights to this
-   software under copyright law.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-   IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-   OTHER DEALINGS IN THE SOFTWARE.
-
-   For more information, please refer to <http://unlicense.org/>
+ *   This is free and unencumbered software released into the public domain.  *
+ *									      *
+ *   Anyone is free to copy, modify, publish, use, compile, sell, or	      *
+ *   distribute this software, either in source code form or as a compiled    *
+ *   binary, for any purpose, commercial or non-commercial, and by any	      *
+ *   means.								      *
+ *									      *
+ *   In jurisdictions that recognize copyright laws, the author or authors    *
+ *   of this software dedicate any and all copyright interest in the	      *
+ *   software to the public domain. We make this dedication for the benefit   *
+ *   of the public at large and to the detriment of our heirs and	      *
+ *   successors. We intend this dedication to be an overt act of	      *
+ *   relinquishment in perpetuity of all present and future rights to this    *
+ *   software under copyright law.					      *
+ *									      *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,	      *
+ *   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF       *
+ *   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.   *
+ *   IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR        *
+ *   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,    *
+ *   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR    *
+ *   OTHER DEALINGS IN THE SOFTWARE.					      *
+ *									      *
+ *   For more information, please refer to <http://unlicense.org/>            *
 \* ========================================================================== */
 
 #include <stdio.h>
@@ -36,6 +36,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <termios.h>
 
 #define KEYSIZE	256
 FILE *infile;
@@ -134,6 +135,47 @@ int fgethex(FILE *fp)
 
 	sscanf(hexbuffer, "%2x", &ret);
 	return ret;
+}
+
+/*
+ *	The following is a slightly modifed version taken from:
+ *	http://www.gnu.org/software/libc/manual/html_node/getpass.html
+ *
+ *	Get from https://stackoverflow.com/a/30801407
+ */
+
+ssize_t my_getpass (char *prompt, char **lineptr, size_t *n, FILE *stream)
+{
+	struct termios _old, _new;
+	int nread;
+
+	/* Turn echoing off and fail if we can’t. */
+	if (tcgetattr (fileno (stream), &_old) != 0)
+		return -1;
+	_new = _old;
+	_new.c_lflag &= ~ECHO;
+	if (tcsetattr (fileno (stream), TCSAFLUSH, &_new) != 0)
+		return -1;
+
+	/* Display the prompt */
+	if (prompt)
+		fprintf(stderr, "%s", prompt);
+
+	/* Read the password. */
+	nread = getline (lineptr, n, stream);
+
+	/* Remove the carriage return */
+	if (nread >= 1 && (*lineptr)[nread - 1] == '\n')
+	{
+		(*lineptr)[nread-1] = 0;
+		nread--;
+	}
+	fputc('\n', stderr);
+
+	/* Restore terminal. */
+	(void) tcsetattr (fileno (stream), TCSAFLUSH, &_old);
+
+	return nread;
 }
 
 int main(int argc, char **argv)
@@ -239,18 +281,30 @@ int main(int argc, char **argv)
 				}
 				else
 					pwfile=stdin;
-				if(pwfile == stdin)
-					fputs("PW: ", stderr);
 				if(opt_hex)
 				{
+					if(pwfile == stdin)
+						fputs("PW: ", stderr);
 					while((input = fgethex(pwfile)) != EOF && keylength < KEYSIZE)
 						key[keylength++]=(uint8_t)input;
 					opt_hex=0;
 				}
 				else
 				{
-					fgets(key, KEYSIZE, pwfile);
-					keylength = strnlen(key, KEYSIZE);
+					if(pwfile == stdin)
+					{
+						my_getpass("PW: ", (char**) &key, &keylength, stdin);
+						if(keylength == 0 || keylength > KEYSIZE)
+						{
+							fputs("?KEY\n", stderr);
+							exit(4);
+						}
+					}
+					else
+					{
+						while((input = fgethex(pwfile)) != EOF && keylength < KEYSIZE)
+							key[keylength++]=(uint8_t)input;
+					}
 				}
 				status |= ST_KEY_MASK;
 				break;
