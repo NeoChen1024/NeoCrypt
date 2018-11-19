@@ -116,13 +116,40 @@ void hex2str(char *hex, size_t *strlength, uint8_t *str)
 	(*strlength)=strptr;
 }
 
+int valid_hexdecimal[256] =
+{
+	['0']=1,
+	['1']=1,
+	['2']=1,
+	['3']=1,
+	['4']=1,
+	['5']=1,
+	['6']=1,
+	['7']=1,
+	['8']=1,
+	['9']=1,
+	['a']=1,
+	['b']=1,
+	['c']=1,
+	['d']=1,
+	['e']=1,
+	['f']=1,
+	['A']=1,
+	['B']=1,
+	['C']=1,
+	['D']=1,
+	['E']=1,
+	['F']=1
+};
+
 int fgethex(FILE *fp)
 {
 	char hexbuffer[3]={0,0,0};
 	int c=0;
 	int ret=0;
 
-	if((c = fgetc(fp)) != EOF)
+	while(!valid_hexdecimal[(c = fgetc(fp))]);
+	if(c != EOF)
 		hexbuffer[0]=(char)c;
 	else
 		return EOF;
@@ -177,6 +204,14 @@ ssize_t my_getpass (char *prompt, char **lineptr, size_t *n, FILE *stream)
 	return nread;
 }
 
+int foutput(uint8_t out, FILE *fp)
+{
+	if(ST_OUTHEX)
+		return fprintf(fp, "%02x", prga(sbox, out));
+	else
+		return fputc(prga(sbox, out), fp);
+}
+
 int main(int argc, char **argv)
 {
 	setvbuf(stderr, NULL, _IONBF, 0);
@@ -186,14 +221,14 @@ int main(int argc, char **argv)
 	size_t ptr=0;
 	int opt;
 	int opt_hex=0;
-	while((opt = getopt(argc, argv, "has:i:o:k:p:v")) != -1)
+	while((opt = getopt(argc, argv, "hxs:i:o:k:p:v")) != -1)
 	{
 		switch(opt)
 		{
-			case 'a':
+			case 'x':	/* Hexdecimal argument prefix */
 				opt_hex=1;
 				break;
-			case 'i': /* File */
+			case 'i':	/* Input from fd */
 				if(strcmp(optarg, "-"))
 				{
 					if((infile = fopen(optarg, "r")) == NULL)
@@ -211,7 +246,7 @@ int main(int argc, char **argv)
 				}
 				status |= ST_IN_MASK;
 				break;
-			case 's':
+			case 's':	/* Input from argument */
 				strlength = strlen(optarg);
 				if(opt_hex)
 				{
@@ -232,7 +267,7 @@ int main(int argc, char **argv)
 				}
 				status |= ST_INSTR_MASK;
 				break;
-			case 'o':
+			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
 				{
 					if((outfile = fopen(optarg, "w")) == NULL)
@@ -250,7 +285,7 @@ int main(int argc, char **argv)
 				}
 				status |= ST_OUT_MASK;
 				break;
-			case 'k':
+			case 'k':	/* Key from argument */
 				if(opt_hex)
 				{
 					hex2str(optarg, &keylength, key);
@@ -269,7 +304,7 @@ int main(int argc, char **argv)
 					status |= ST_KEY_MASK;
 				}
 				break;
-			case 'p':
+			case 'p':	/* Key from fd */
 				if(strcmp(optarg, "-"))
 				{
 					if((pwfile = fopen(optarg, "r")) == NULL)
@@ -314,8 +349,8 @@ int main(int argc, char **argv)
 				}
 				status |= ST_KEY_MASK;
 				break;
-			case 'v':
-				verbose++;
+			case 'v':	/* Hyper verbose */
+				verbose=1;
 				break;
 			case 'h': /* Help */
 				printf("Usage: %s [-h] [-a] [-f] [-i infile] [-o outfile] [-k key] [-s instr] [-x hex] [-v]\n", argv[0]);
@@ -353,20 +388,14 @@ int main(int argc, char **argv)
 		{
 			while((input = fgethex(infile)) != EOF && ret != EOF)
 			{
-				if(ST_OUTHEX)
-					fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
-				else
-					ret = fputc(prga(sbox, (uint8_t)input), outfile);
+				ret = foutput((uint8_t)input, outfile);
 			}
 		}
 		else
 		{
 			while((input = fgetc(infile)) != EOF && ret != EOF)
 			{
-				if(ST_OUTHEX)
-					fprintf(outfile, "%02x", prga(sbox, (uint8_t)input));
-				else
-					ret = fputc(prga(sbox, (uint8_t)input), outfile);
+				ret = foutput((uint8_t)input, outfile);
 			}
 		}
 		fclose(infile);
@@ -375,16 +404,11 @@ int main(int argc, char **argv)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			if(ST_OUTHEX)
-				ret = fprintf(outfile, "%02x", prga(sbox, str[ptr]));
-			else
-				ret = fputc(prga(sbox, str[ptr]), outfile);
-			ptr++;
+			ret = foutput(str[ptr++], outfile);
 		}
 	}
 
 	if(ST_OUTHEX)
 		fputc('\n', outfile);
-
 	fclose(outfile);
 }
