@@ -40,6 +40,7 @@
 #define KEYSIZE	256
 FILE *infile;
 FILE *outfile;
+FILE *pwfile;
 uint8_t sbox[256];
 uint8_t key[KEYSIZE];
 char *str;
@@ -49,15 +50,13 @@ size_t keylength=0;
 int verbose=0;
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
-#define ST_KEYHEX_MASK	0x02
-#define ST_IN_MASK	0x04
-#define ST_INSTR_MASK	0x08
-#define ST_OUT_MASK	0x10
-#define ST_OUTHEX_MASK	0x20
-#define ST_INHEX_MASK	0x40
+#define ST_IN_MASK	0x02
+#define ST_INSTR_MASK	0x04
+#define ST_OUT_MASK	0x08
+#define ST_OUTHEX_MASK	0x10
+#define ST_INHEX_MASK	0x20
 
 #define ST_KEY		(status & ST_KEY_MASK)
-#define ST_KEYHEX	(status & ST_KEYHEX_MASK)
 #define ST_IN		(status & ST_IN_MASK)
 #define ST_INSTR	(status & ST_INSTR_MASK)
 #define ST_OUT		(status & ST_OUT_MASK)
@@ -145,10 +144,14 @@ int main(int argc, char **argv)
 	int ret=0;
 	size_t ptr=0;
 	int opt;
-	while((opt = getopt(argc, argv, "hs:fi:ao:k:x:v")) != -1)
+	int opt_hex=0;
+	while((opt = getopt(argc, argv, "has:i:o:k:p:v")) != -1)
 	{
 		switch(opt)
 		{
+			case 'a':
+				opt_hex=1;
+				break;
 			case 'i': /* File */
 				if(strcmp(optarg, "-"))
 				{
@@ -160,15 +163,21 @@ int main(int argc, char **argv)
 				}
 				else
 					infile=stdin;
+				if(opt_hex)
+				{
+					status |= ST_INHEX_MASK;
+					opt_hex=0;
+				}
 				status |= ST_IN_MASK;
 				break;
 			case 's':
 				strlength = strlen(optarg);
-				if(ST_INHEX)
+				if(opt_hex)
 				{
 					str = calloc((strlength / 2) + (strlength % 2) + 1, sizeof(char));
 					hex2str(optarg, &strlength, (uint8_t *)str);
 					strlength = strlen(optarg);
+					opt_hex=0;
 				}
 				else
 				{
@@ -178,15 +187,9 @@ int main(int argc, char **argv)
 						exit(2);
 					}
 					str = calloc(strlength, sizeof(char));
-					strcpy(str, optarg);
-					status |= ST_INSTR_MASK;
+					strlcpy(str, optarg, strlength);
 				}
-				break;
-			case 'f':
-				status |= ST_INHEX_MASK;
-				break;
-			case 'a':
-				status |= ST_OUTHEX_MASK;
+				status |= ST_INSTR_MASK;
 				break;
 			case 'o':
 				if(strcmp(optarg, "-"))
@@ -199,21 +202,57 @@ int main(int argc, char **argv)
 				}
 				else
 					outfile=stdout;
+				if(opt_hex)
+				{
+					status |= ST_OUTHEX_MASK;
+					opt_hex=0;
+				}
 				status |= ST_OUT_MASK;
 				break;
 			case 'k':
-				strncpy((char*)key, optarg, KEYSIZE);
-				keylength = strnlen((char*)key, KEYSIZE);
-				if(keylength == 0)
+				if(opt_hex)
 				{
-					fputs("?KEY\n", stderr);
-					exit(4);
+					hex2str(optarg, &keylength, key);
+					status |= ST_KEY_MASK;
+					opt_hex=0;
+				}
+				else
+				{
+					strlcpy((char*)key, optarg, KEYSIZE);
+					keylength = strnlen((char*)key, KEYSIZE);
+					if(keylength == 0)
+					{
+						fputs("?KEY\n", stderr);
+						exit(4);
+					}
+					status |= ST_KEY_MASK;
+				}
+				break;
+			case 'p':
+				if(strcmp(optarg, "-"))
+				{
+					if((pwfile = fopen(optarg, "r")) == NULL)
+					{
+						perror(optarg);
+						exit(8);
+					}
+				}
+				else
+					pwfile=stdin;
+				if(pwfile == stdin)
+					fputs("PW: ", stderr);
+				if(opt_hex)
+				{
+					while((input = fgethex(pwfile)) != EOF && keylength < KEYSIZE)
+						key[keylength++]=(uint8_t)input;
+					opt_hex=0;
+				}
+				else
+				{
+					fgets(key, KEYSIZE, pwfile);
+					keylength = strnlen(key, KEYSIZE);
 				}
 				status |= ST_KEY_MASK;
-				break;
-			case 'x':
-				hex2str(optarg, &keylength, key);
-				status |= ST_KEYHEX_MASK;
 				break;
 			case 'v':
 				verbose++;
@@ -228,7 +267,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if(! ((ST_KEY || ST_KEYHEX) && (ST_IN || ST_INSTR) && ST_OUT))
+	if(! (ST_KEY && (ST_IN || ST_INSTR) && ST_OUT))
 	{
 		fputs("?ARG\n", stderr);
 		exit(8);
