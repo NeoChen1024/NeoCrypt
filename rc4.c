@@ -66,10 +66,9 @@ uint8_t status=0;
 
 void swap(uint8_t *a, uint8_t *b)
 {
-	uint8_t tmp;
-	tmp = *a;
-	*a = *b;
-	*b = tmp;
+	(*a) ^= (*b);
+	(*b) ^= (*a);
+	(*a) ^= (*b);
 }
 
 void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
