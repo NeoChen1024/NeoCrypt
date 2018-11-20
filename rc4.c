@@ -116,39 +116,13 @@ void hex2str(char *hex, size_t *strlength, uint8_t *str)
 	(*strlength)=strptr;
 }
 
-int valid_hexdecimal[256] =
-{
-	['0']=1,
-	['1']=1,
-	['2']=1,
-	['3']=1,
-	['4']=1,
-	['5']=1,
-	['6']=1,
-	['7']=1,
-	['8']=1,
-	['9']=1,
-	['a']=1,
-	['b']=1,
-	['c']=1,
-	['d']=1,
-	['e']=1,
-	['f']=1,
-	['A']=1,
-	['B']=1,
-	['C']=1,
-	['D']=1,
-	['E']=1,
-	['F']=1
-};
-
 int fgethex(FILE *fp)
 {
 	char hexbuffer[3]={0,0,0};
 	int c=0;
 	int ret=0;
 
-	while((c = fgetc(fp) != EOF);
+	if((c = fgetc(fp)) != EOF)
 		hexbuffer[0]=(char)c;
 	else
 		return EOF;
@@ -213,8 +187,6 @@ int foutput(uint8_t out, FILE *fp)
 
 int main(int argc, char **argv)
 {
-	setvbuf(stderr, NULL, _IONBF, 0);
-
 	int input=0;
 	int ret=0;
 	size_t ptr=0;
