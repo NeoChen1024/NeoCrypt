@@ -47,6 +47,8 @@ uint8_t key[KEYSIZE];
 char *str;
 size_t strlength=0;
 size_t keylength=0;
+int prga_i=0;
+int prga_j=0;
 
 int verbose=0;
 uint8_t status=0;
@@ -83,16 +85,15 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 	}
 }
 
-uint8_t prga(uint8_t *sbox, uint8_t input)
+uint8_t prga(uint8_t *sbox, int *i, int *j, uint8_t input)
 {
-	static int i=0, j=0;
 	uint8_t output=0;
-	i = (i + 1) & 0xFF;
-	j = (j + sbox[i]) & 0xFF;
-	swap(sbox + i, sbox +j);
-	output = input ^ sbox[(sbox[i] + sbox[j]) & 0xFF];
+	*i = (*i + 1) & 0xFF;
+	*j = (*j + sbox[*i]) & 0xFF;
+	swap(sbox + *i, sbox + *j);
+	output = input ^ sbox[(sbox[*i] + sbox[*j]) & 0xFF];
 	if(verbose)
-		fprintf(stderr, "PRGA: S[i = %#x]=%#x,\tS[j = %#x]=%#x,\tIN=%#x,\tOUT=%#x\n", i, sbox[i], j, sbox[j], input, output);
+		fprintf(stderr, "PRGA: S[i = %#x]=%#x,\tS[j = %#x]=%#x,\tIN=%#x,\tOUT=%#x\n", *i, sbox[*i], *j, sbox[*j], input, output);
 	return output;
 }
 
@@ -365,7 +366,7 @@ int main(int argc, char **argv)
 	{
 		while((input = finput(infile)) != EOF && ret != EOF)
 		{
-			ret = foutput(prga(sbox, (uint8_t)input), outfile);
+			ret = foutput(prga(sbox, &prga_i, &prga_j, (uint8_t)input), outfile);
 		}
 		fclose(infile);
 	}
@@ -373,7 +374,7 @@ int main(int argc, char **argv)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			ret = foutput(prga(sbox, str[ptr++]), outfile);
+			ret = foutput(prga(sbox, &prga_i, &prga_j, str[ptr++]), outfile);
 		}
 	}
 
