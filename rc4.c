@@ -148,8 +148,7 @@ int fgethex(FILE *fp)
 	int c=0;
 	int ret=0;
 
-	while(!valid_hexdecimal[(c = fgetc(fp))]);
-	if(c != EOF)
+	while((c = fgetc(fp) != EOF);
 		hexbuffer[0]=(char)c;
 	else
 		return EOF;
