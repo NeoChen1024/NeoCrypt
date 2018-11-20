@@ -136,6 +136,22 @@ int fgethex(FILE *fp)
 	return ret;
 }
 
+int finput(FILE *fp)
+{
+	if(ST_INHEX)
+		return fgethex(fp);
+	else
+		return fgetc(fp);
+}
+
+int foutput(uint8_t out, FILE *fp)
+{
+	if(ST_OUTHEX)
+		return fprintf(fp, "%02hhX", (uint8_t)out);
+	else
+		return fputc((char)out, fp);
+}
+
 /*
  *	The following is a slightly modifed version taken from:
  *	http://www.gnu.org/software/libc/manual/html_node/getpass.html
@@ -175,14 +191,6 @@ ssize_t my_getpass (char *prompt, char **lineptr, size_t *n, FILE *stream)
 	(void) tcsetattr (fileno (stream), TCSAFLUSH, &_old);
 
 	return nread;
-}
-
-int foutput(uint8_t out, FILE *fp)
-{
-	if(ST_OUTHEX)
-		return fprintf(fp, "%02x", prga(sbox, out));
-	else
-		return fputc(prga(sbox, out), fp);
 }
 
 int main(int argc, char **argv)
@@ -355,19 +363,9 @@ int main(int argc, char **argv)
 
 	if(ST_IN)
 	{
-		if(ST_INHEX)
+		while((input = finput(infile)) != EOF && ret != EOF)
 		{
-			while((input = fgethex(infile)) != EOF && ret != EOF)
-			{
-				ret = foutput((uint8_t)input, outfile);
-			}
-		}
-		else
-		{
-			while((input = fgetc(infile)) != EOF && ret != EOF)
-			{
-				ret = foutput((uint8_t)input, outfile);
-			}
+			ret = foutput(prga(sbox, (uint8_t)input), outfile);
 		}
 		fclose(infile);
 	}
@@ -375,7 +373,7 @@ int main(int argc, char **argv)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			ret = foutput(str[ptr++], outfile);
+			ret = foutput(prga(sbox, str[ptr++]), outfile);
 		}
 	}
 
