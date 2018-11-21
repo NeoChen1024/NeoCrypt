@@ -79,6 +79,7 @@ void swap(uint8_t *a, uint8_t *b)
 void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 {
 	int i=0, j=0;
+	int count=0;
 	for(i=0; i < (1<<8); ++i)
 		sbox[i]=i;
 	for(i=0; i < (1<<8); ++i)
@@ -86,6 +87,18 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 		j = (j + sbox[i] + key[i % keylength]) & 0xFF;
 		swap(sbox + i, sbox +j);
 	}
+	if(verbose)
+	{
+		fputs("S-box:\n", stderr);
+		for(count=0; count < 256; count++)
+		{
+			fprintf(stderr, "S[0x%02x]=0x%02x ", count, sbox[count]);
+			if((count & 0x07)  == 7)
+				fputc('\n', stderr);
+		}
+		fprintf(stderr, "KEY = \"%s\\0\"\n", key);
+	}
+
 }
 
 uint8_t prga(uint8_t *sbox, int *i, int *j, uint8_t input)
@@ -96,7 +109,7 @@ uint8_t prga(uint8_t *sbox, int *i, int *j, uint8_t input)
 	swap(sbox + *i, sbox + *j);
 	output = input ^ sbox[(sbox[*i] + sbox[*j]) & 0xFF];
 	if(verbose)
-		fprintf(stderr, "PRGA: S[i = %#x]=%#x,\tS[j = %#x]=%#x,\tIN=%#x,\tOUT=%#x\n", *i, sbox[*i], *j, sbox[*j], input, output);
+		fprintf(stderr, "PRGA:\tS[i=%#x]=%#x,\tS[j=%#x]=%#x,\tIN=%#x,\tOUT=%#x\n", *i, sbox[*i], *j, sbox[*j], input, output);
 	return output;
 }
 
@@ -366,18 +379,6 @@ int main(int argc, char **argv)
 		outputfunc = foutbin;
 
 	ksa(sbox, key, keylength);
-
-	size_t count=0;
-	if(verbose)
-	{
-		for(count=0; count < 256; count++)
-		{
-			fprintf(stderr, "S[0x%02zx]=0x%02x ", count, sbox[count]);
-			if((count & 0x07)  == 7)
-				fputc('\n', stderr);
-		}
-		fprintf(stderr, "KEY = \"%s\\0\"\n", key);
-	}
 
 	if(ST_IN)
 	{
