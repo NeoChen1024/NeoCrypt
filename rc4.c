@@ -66,6 +66,9 @@ uint8_t status=0;
 #define ST_OUTHEX	(status & ST_OUTHEX_MASK)
 #define ST_INHEX	(status & ST_INHEX_MASK)
 
+int (*outputfunc)(uint8_t out, FILE *fp);
+int (*inputfunc)(FILE *fp);
+
 void swap(uint8_t *a, uint8_t *b)
 {
 	(*a) ^= (*b);
@@ -137,20 +140,24 @@ int fgethex(FILE *fp)
 	return ret;
 }
 
-int finput(FILE *fp)
+int finbin(FILE *fp)
 {
-	if(ST_INHEX)
-		return fgethex(fp);
-	else
-		return fgetc(fp);
+	return fgetc(fp);
 }
 
-int foutput(uint8_t out, FILE *fp)
+int finhex(FILE *fp)
 {
-	if(ST_OUTHEX)
-		return fprintf(fp, "%02hhX", (uint8_t)out);
-	else
-		return fputc((char)out, fp);
+	return fgethex(fp);
+}
+
+int foutbin(uint8_t out, FILE *fp)
+{
+	return fputc((char)out, fp);
+}
+
+int fouthex(uint8_t out, FILE *fp)
+{
+	return fprintf(fp, "%02hhX", out);
 }
 
 /*
@@ -348,6 +355,16 @@ int main(int argc, char **argv)
 		exit(8);
 	}
 
+	if(ST_INHEX)
+		inputfunc = finhex;
+	else if(ST_IN)
+		inputfunc = finbin;
+
+	if(ST_OUTHEX)
+		outputfunc = fouthex;
+	else if(ST_OUT)
+		outputfunc = foutbin;
+
 	ksa(sbox, key, keylength);
 
 	size_t count=0;
@@ -364,9 +381,9 @@ int main(int argc, char **argv)
 
 	if(ST_IN)
 	{
-		while((input = finput(infile)) != EOF && ret != EOF)
+		while((input = inputfunc(infile)) != EOF && ret != EOF)
 		{
-			ret = foutput(prga(sbox, &prga_i, &prga_j, (uint8_t)input), outfile);
+			ret = outputfunc(prga(sbox, &prga_i, &prga_j, (uint8_t)input), outfile);
 		}
 		fclose(infile);
 	}
@@ -374,7 +391,7 @@ int main(int argc, char **argv)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			ret = foutput(prga(sbox, &prga_i, &prga_j, str[ptr++]), outfile);
+			ret = outputfunc(prga(sbox, &prga_i, &prga_j, str[ptr++]), outfile);
 		}
 	}
 
