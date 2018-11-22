@@ -137,34 +137,20 @@ void hex2str(char *hex, size_t *strlength, uint8_t *str)
 	(*strlength)=strptr;
 }
 
-int fgethex(FILE *fp)
+int finhex(FILE *fp)
 {
-	char hexbuffer[3]={0,0,0};
-	int c=0;
 	int ret=0;
-
-	if((c = fgetc(fp)) != EOF)
-		hexbuffer[0]=(char)c;
-	else
+	int c=0;
+	ret = fscanf(fp, "%2x", &c);
+	if(ret == EOF || ret == 0)
 		return EOF;
-
-	if((c = fgetc(fp)) != EOF)
-		hexbuffer[1]=(char)c;
 	else
-		hexbuffer[1]=0;
-
-	sscanf(hexbuffer, "%2x", &ret);
-	return ret;
+		return c;
 }
 
 int finbin(FILE *fp)
 {
 	return fgetc(fp);
-}
-
-int finhex(FILE *fp)
-{
-	return fgethex(fp);
 }
 
 int foutbin(uint8_t out, FILE *fp)
@@ -177,12 +163,7 @@ int fouthex(uint8_t out, FILE *fp)
 	return fprintf(fp, "%02hhX", out);
 }
 
-/*
- *	The following is a slightly modifed version taken from:
- *	http://www.gnu.org/software/libc/manual/html_node/getpass.html
- *
- *	Get from https://stackoverflow.com/a/30801407
- */
+/* Get from https://stackoverflow.com/a/30801407 */
 
 ssize_t my_getpass (char *prompt, char **lineptr, size_t *n, FILE *stream)
 {
@@ -330,7 +311,7 @@ int main(int argc, char **argv)
 				{
 					if(pwfile == stdin)
 						fputs("PW: ", stderr);
-					while((input = fgethex(pwfile)) != EOF && keylength < KEYSIZE)
+					while((input = finhex(pwfile)) != EOF && keylength < KEYSIZE)
 						key[keylength++]=(uint8_t)input;
 					opt_hex=0;
 				}
@@ -347,7 +328,7 @@ int main(int argc, char **argv)
 					}
 					else
 					{
-						while((input = fgethex(pwfile)) != EOF && keylength < KEYSIZE)
+						while((input = finhex(pwfile)) != EOF && keylength < KEYSIZE)
 							key[keylength++]=(uint8_t)input;
 					}
 				}
