@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 						exit(2);
 					}
 					str = calloc(strlength, sizeof(char));
-					strlcpy(str, optarg, strlength);
+					strncpy(str, optarg, strlength);
 				}
 				status |= ST_INSTR_MASK;
 				break;
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					strlcpy((char*)key, optarg, KEYSIZE);
+					strncpy((char*)key, optarg, KEYSIZE);
 					keylength = strnlen((char*)key, KEYSIZE);
 					if(keylength == 0)
 					{
