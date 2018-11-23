@@ -172,7 +172,7 @@ ssize_t my_getpass (char *prompt, char **lineptr, size_t *n, FILE *stream)
 
 	/* Turn echoing off and fail if we can’t. */
 	if (tcgetattr (fileno (stream), &_old) != 0)
-		return -1;
+		return -2;
 	_new = _old;
 	_new.c_lflag &= ~ECHO;
 	if (tcsetattr (fileno (stream), TCSAFLUSH, &_new) != 0)
@@ -206,6 +206,7 @@ int main(int argc, char **argv)
 	size_t ptr=0;
 	int opt;
 	int opt_hex=0;
+	int pwret=0;
 	while((opt = getopt(argc, argv, "hxs:i:o:k:p:v")) != -1)
 	{
 		switch(opt)
@@ -319,8 +320,8 @@ int main(int argc, char **argv)
 				{
 					if(pwfile == stdin)
 					{
-						my_getpass("PW: ", (char**) &key, &keylength, stdin);
-						if(keylength == 0 || keylength > KEYSIZE)
+						pwret =my_getpass("PW: ", (char**) &key, &keylength, stdin);
+						if(keylength == 0 || keylength > KEYSIZE || pwret < 0)
 						{
 							fputs("?KEY\n", stderr);
 							exit(4);
