@@ -69,6 +69,15 @@ uint8_t status=0;
 int (*outputfunc)(uint8_t out, FILE *fp);
 int (*inputfunc)(FILE *fp);
 
+#ifdef INLINE /* Uses a global variable "swaptemp", not thread-safe */
+uint8_t swaptemp=0;
+#	define inlineswap(a, b) \
+	{			\
+		swaptemp = a;	\
+		a = b;		\
+		b = swaptemp;	\
+	}
+#endif
 #ifdef XORSWAP
 void swap(uint8_t *a, uint8_t *b)
 {
@@ -118,7 +127,11 @@ uint8_t prga(uint8_t *sbox, int *i, int *j, uint8_t input)
 	uint8_t output=0;
 	*i = (*i + 1) & 0xFF;
 	*j = (*j + sbox[*i]) & 0xFF;
+#ifdef INLINE
+	inlineswap(sbox[*i], sbox[*j]);
+#else
 	swap(sbox + *i, sbox + *j);
+#endif
 	output = input ^ sbox[(sbox[*i] + sbox[*j]) & 0xFF];
 #ifdef DEBUG
 	if(verbose)
