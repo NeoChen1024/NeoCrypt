@@ -69,12 +69,22 @@ uint8_t status=0;
 int (*outputfunc)(uint8_t out, FILE *fp);
 int (*inputfunc)(FILE *fp);
 
+#ifdef XORSWAP
 void swap(uint8_t *a, uint8_t *b)
 {
 	(*a) ^= (*b);
 	(*b) ^= (*a);
 	(*a) ^= (*b);
 }
+#else
+void swap(uint8_t *a, uint8_t *b)
+{
+	uint8_t temp=0;
+	temp = *a;
+	*a = *b;
+	*b = temp;
+}
+#endif
 
 void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 {
