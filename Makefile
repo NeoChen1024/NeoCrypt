@@ -1,9 +1,10 @@
 CC	= cc
-CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC
+OPT	= -DINLINE
+CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC $(OPT)
 EXE	= rc4
 
 all: ${EXE}
-arc4:
+rc4:
 	$(CC) $(CFLAGS) -o $@ $@.c
 countline:
 	wc -l *.c
