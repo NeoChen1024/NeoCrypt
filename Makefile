@@ -1,5 +1,5 @@
 CC	= cc
-OPT	= -DINLINE
+OPT	=
 CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC $(OPT)
 EXE	= rc4
 
