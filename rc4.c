@@ -343,7 +343,7 @@ int main(int argc, char **argv)
 				{
 					if(pwfile == stdin)
 					{
-						pwret =my_getpass("PW: ", (char**) &key, &keylength, stdin);
+						pwret = my_getpass("PW: ", (char**) &key, &keylength, stdin);
 						if(keylength == 0 || keylength > KEYSIZE || pwret < 0)
 						{
 							fputs("?KEY\n", stderr);
