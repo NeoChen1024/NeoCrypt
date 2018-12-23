@@ -1,6 +1,5 @@
 CC	= cc
-OPT	=
-CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC $(OPT)
+CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC
 EXE	= rc4
 
 all: ${EXE}

@@ -50,7 +50,6 @@ size_t keylength=0;
 int prga_i=0;
 int prga_j=0;
 
-int verbose=0;
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
 #define ST_IN_MASK	0x02
@@ -69,15 +68,6 @@ uint8_t status=0;
 int (*outputfunc)(uint8_t out, FILE *fp);
 int (*inputfunc)(FILE *fp);
 
-#ifdef INLINE /* Uses a global variable "swaptemp", not thread-safe */
-uint8_t swaptemp=0;
-#	define inlineswap(a, b) \
-	{			\
-		swaptemp = a;	\
-		a = b;		\
-		b = swaptemp;	\
-	}
-#endif
 #ifdef XORSWAP
 void swap(uint8_t *a, uint8_t *b)
 {
@@ -105,39 +95,14 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 		j = (j + sbox[i] + key[i % keylength]) & 0xFF;
 		swap(sbox + i, sbox +j);
 	}
-
-#ifdef DEBUG
-	int count=0;
-	if(verbose)
-	{
-		fputs("S-box:\n", stderr);
-		for(count=0; count < 256; count++)
-		{
-			fprintf(stderr, "S[0x%02x]=0x%02x ", count, sbox[count]);
-			if((count & 0x07)  == 7)
-				fputc('\n', stderr);
-		}
-		fprintf(stderr, "KEY = \"%s\\0\"\n", key);
-	}
-#endif
 }
 
-uint8_t prga(uint8_t *sbox, int *i, int *j, uint8_t input)
+uint8_t prga(uint8_t *sbox, int *i, int *j)
 {
-	uint8_t output=0;
 	*i = (*i + 1) & 0xFF;
 	*j = (*j + sbox[*i]) & 0xFF;
-#ifdef INLINE
-	inlineswap(sbox[*i], sbox[*j]);
-#else
 	swap(sbox + *i, sbox + *j);
-#endif
-	output = input ^ sbox[(sbox[*i] + sbox[*j]) & 0xFF];
-#ifdef DEBUG
-	if(verbose)
-		fprintf(stderr, "PRGA:\tS[i=%#x]=%#x,\tS[j=%#x]=%#x,\tIN=%#x,\tOUT=%#x\n", *i, sbox[*i], *j, sbox[*j], input, output);
-#endif
-	return output;
+	return sbox[(sbox[*i] + sbox[*j]) & 0xFF];
 }
 
 void hex2str(char *hex, size_t *strlength, uint8_t *str)
@@ -358,9 +323,6 @@ int main(int argc, char **argv)
 				}
 				status |= ST_KEY_MASK;
 				break;
-			case 'v':	/* Hyper verbose */
-				verbose=1;
-				break;
 			case 'h': /* Help */
 				printf("Usage: %s [-h] [-x] [-i infile] [-s instr] [-o outfile] [-k key] [-p keyfile] [-v]\n", argv[0]);
 				exit(0);
@@ -393,7 +355,7 @@ int main(int argc, char **argv)
 	{
 		while((input = inputfunc(infile)) != EOF && ret != EOF)
 		{
-			ret = outputfunc(prga(sbox, &prga_i, &prga_j, (uint8_t)input), outfile);
+			ret = outputfunc(prga(sbox, &prga_i, &prga_j) ^ input, outfile);
 		}
 		fclose(infile);
 	}
@@ -401,7 +363,7 @@ int main(int argc, char **argv)
 	{
 		while(ptr < strlength && ret != EOF)
 		{
-			ret = outputfunc(prga(sbox, &prga_i, &prga_j, str[ptr++]), outfile);
+			ret = outputfunc(prga(sbox, &prga_i, &prga_j) ^ str[ptr++], outfile);
 		}
 	}
 
