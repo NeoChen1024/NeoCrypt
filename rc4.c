@@ -55,15 +55,11 @@ uint8_t status=0;
 #define ST_IN_MASK	0x02
 #define ST_INSTR_MASK	0x04
 #define ST_OUT_MASK	0x08
-#define ST_OUTHEX_MASK	0x10
-#define ST_INHEX_MASK	0x20
 
 #define ST_KEY		(status & ST_KEY_MASK)
 #define ST_IN		(status & ST_IN_MASK)
 #define ST_INSTR	(status & ST_INSTR_MASK)
 #define ST_OUT		(status & ST_OUT_MASK)
-#define ST_OUTHEX	(status & ST_OUTHEX_MASK)
-#define ST_INHEX	(status & ST_INHEX_MASK)
 
 #ifdef XORSWAP
 void swap(uint8_t *a, uint8_t *b)
