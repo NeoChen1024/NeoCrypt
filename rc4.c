@@ -47,8 +47,7 @@ uint8_t key[KEYSIZE];
 char *str;
 size_t strlength=0;
 size_t keylength=0;
-int prga_i=0;
-int prga_j=0;
+int i=0, j=0;
 
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
@@ -92,7 +91,6 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t keylength)
 
 uint8_t prga(uint8_t *sbox)
 {
-	static int i=0, j=0;
 	i = (i + 1) & 0xFF;
 	j = (j + sbox[i]) & 0xFF;
 	swap(sbox + i, sbox + j);
