@@ -1,5 +1,5 @@
 CC	= cc
-CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC
+CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC -ansi -pedantic
 EXE	= rc4
 
 all: ${EXE}
