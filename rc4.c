@@ -49,6 +49,15 @@ size_t strlength=0;
 size_t keylength=0;
 int i=0, j=0;
 
+/* Bulk IO */
+uint8_t *inbuf;
+uint8_t *outbuf;
+ssize_t bufnbyte=0;
+size_t bufsize=(1<<12);
+/* File Descriptor */
+int infd;
+int outfd;
+
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
 #define ST_IN_MASK	0x02
@@ -97,7 +106,6 @@ uint8_t prga(uint8_t *sbox)
 	return sbox[(sbox[i] + sbox[j]) & 0xFF];
 }
 
-/* Hexdecimal string to byte array */
 size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
 	size_t size=0;
@@ -109,13 +117,17 @@ size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 	return size;
 }
 
-int main(int argc, char **argv)
+void panic(char *msg, int err)
 {
-	int input=0;
-	int ret=0;
-	size_t ptr=0;
+	fputs(msg, stderr);
+	putc('\n', stderr);
+	exit(err);
+}
+
+void parsearg(int argc, char **argv)
+{
 	int opt;
-	while((opt = getopt(argc, argv, "hs:i:o:k:p:")) != -1)
+	while((opt = getopt(argc, argv, "hs:i:o:k:p:b:")) != -1)
 	{
 		switch(opt)
 		{
@@ -135,10 +147,7 @@ int main(int argc, char **argv)
 			case 's':	/* Input from argument */
 				strlength = strlen(optarg);
 				if(strlength == 0)
-				{
-					fputs("?STR\n", stderr);
-					exit(2);
-				}
+					panic("?STR", 4);
 				str = calloc(strlength, sizeof(char));
 				strncpy(str, optarg, strlength);
 				status |= ST_INSTR_MASK;
@@ -157,13 +166,10 @@ int main(int argc, char **argv)
 				status |= ST_OUT_MASK;
 				break;
 			case 'k':	/* Key from argument */
-				strncpy((char*)key, optarg, KEYSIZE);
-				keylength = strnlen((char*)key, KEYSIZE);
+				strncpy((char*)key, optarg, KEYSIZE - 1);
+				keylength = strlen((char*)key);
 				if(keylength == 0)
-				{
-					fputs("?KEY\n", stderr);
-					exit(4);
-				}
+					panic("?KEY", 5);
 				status |= ST_KEY_MASK;
 				break;
 			case 'p':	/* Key from fd */
@@ -180,24 +186,39 @@ int main(int argc, char **argv)
 				{
 					pwfile=stdin;
 					if(infile == stdin)
-					{
-						fputs("?PWDIN\n", stderr);
-						exit(4);
-					}
+						panic("?PWDIN", 6);
 					fputs("?PW=", stdout);
 					keylength = readbyte(key, KEYSIZE, stdin);
 				}
 				status |= ST_KEY_MASK;
 				break;
+			case 'b':
+				sscanf(optarg, "%lu", &bufsize);
+				if(bufsize == 0)
+					panic("?BUFSIZE", 7);
+				break;
 			case 'h': /* Help */
 				printf("Usage: %s [-h] [-i infile] [-s instr] [-o outfile] [-k key] [-p keyfile]\n", argv[0]);
 				exit(0);
 			default:
-				fputs("?INVARG\n", stderr);
-				exit(1);
-
+				panic("?INVARG", 8);
 		}
 	}
+}
+
+void blkprga(uint8_t *in, uint8_t *out, size_t nbytes)
+{
+	size_t i=0;
+	for(i=0; i < nbytes; i++)
+		out[i] = in[i] ^ prga(sbox);
+}
+
+int main(int argc, char **argv)
+{
+	int ret=0;
+	size_t ptr=0;
+
+	parsearg(argc, argv);
 
 	if(! (ST_KEY && (ST_IN || ST_INSTR) && ST_OUT))
 	{
@@ -207,11 +228,18 @@ int main(int argc, char **argv)
 
 	ksa(sbox, key, keylength);
 
+	infd	= infile->_fileno;
+	outfd	= outfile->_fileno;
+
+	inbuf	= calloc(bufsize, 1);
+	outbuf	= calloc(bufsize, 1);
+
 	if(ST_IN)
 	{
-		while((input = getc(infile)) != EOF && ret != EOF)
+		while((bufnbyte = read(infd, inbuf, bufsize)) > 0)
 		{
-			ret = putc(prga(sbox) ^ input, outfile);
+			blkprga(inbuf, outbuf, bufnbyte);
+			write(outfd, outbuf, bufnbyte);
 		}
 		fclose(infile);
 	}
@@ -223,4 +251,5 @@ int main(int argc, char **argv)
 		}
 	}
 	fclose(outfile);
+	return 0;
 }
