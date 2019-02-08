@@ -208,8 +208,9 @@ void parsearg(int argc, char **argv)
 
 void blkprga(uint8_t *in, uint8_t *out, size_t nbytes)
 {
-	size_t i=0;
-	for(i=0; i < nbytes; i++)
+	unsigned int size=nbytes;
+	unsigned int i=0;
+	for(i=0; i < size; i++)
 		out[i] = in[i] ^ prga(sbox);
 }
 
