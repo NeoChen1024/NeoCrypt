@@ -36,11 +36,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <fcntl.h>
 #include <termios.h>
 
 #define KEYSIZE	256
-FILE *infile;
-FILE *outfile;
 FILE *pwfile;
 uint8_t sbox[256];
 uint8_t key[KEYSIZE];
@@ -57,6 +56,8 @@ size_t bufsize=(1<<12);
 /* File Descriptor */
 int infd;
 int outfd;
+
+FILE *outfile;
 
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
@@ -134,14 +135,14 @@ void parsearg(int argc, char **argv)
 			case 'i':	/* Input from fd */
 				if(strcmp(optarg, "-"))
 				{
-					if((infile = fopen(optarg, "r")) == NULL)
+					if((infd = open(optarg, O_RDONLY)) == EOF)
 					{
 						perror(optarg);
 						exit(8);
 					}
 				}
 				else
-					infile=stdin;
+					infd=0;	/* stdin */
 				status |= ST_IN_MASK;
 				break;
 			case 's':	/* Input from argument */
@@ -155,14 +156,14 @@ void parsearg(int argc, char **argv)
 			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
 				{
-					if((outfile = fopen(optarg, "w")) == NULL)
+					if((outfd = open(optarg, O_WRONLY | O_TRUNC)) == EOF)
 					{
 						perror(optarg);
 						exit(8);
 					}
 				}
 				else
-					outfile=stdout;
+					outfd=1;	/* stdout */
 				status |= ST_OUT_MASK;
 				break;
 			case 'k':	/* Key from argument */
@@ -185,7 +186,7 @@ void parsearg(int argc, char **argv)
 				else
 				{
 					pwfile=stdin;
-					if(infile == stdin)
+					if(infd == 0)	/* fd == stdin */
 						panic("?PWDIN", 6);
 					fputs("?PW=", stdout);
 					keylength = readbyte(key, KEYSIZE, stdin);
@@ -216,8 +217,7 @@ void blkprga(uint8_t *in, uint8_t *out, size_t nbytes)
 
 int main(int argc, char **argv)
 {
-	int ret=0;
-	size_t ptr=0;
+	size_t len=0;
 
 	parsearg(argc, argv);
 
@@ -229,9 +229,6 @@ int main(int argc, char **argv)
 
 	ksa(sbox, key, keylength);
 
-	infd	= infile->_fileno;
-	outfd	= outfile->_fileno;
-
 	inbuf	= calloc(bufsize, 1);
 	outbuf	= calloc(bufsize, 1);
 
@@ -242,15 +239,12 @@ int main(int argc, char **argv)
 			blkprga(inbuf, outbuf, bufnbyte);
 			write(outfd, outbuf, bufnbyte);
 		}
-		fclose(infile);
 	}
 	else if(ST_INSTR)
 	{
-		while(ptr < strlength && ret != EOF)
-		{
-			ret = putc(prga(sbox) ^ str[ptr++], outfile);
-		}
+		len = strlen(str);
+		blkprga((uint8_t *)str, outbuf, len);
+		write(outfd, outbuf, len);
 	}
-	fclose(outfile);
 	return 0;
 }
