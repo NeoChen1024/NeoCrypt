@@ -156,7 +156,7 @@ void parsearg(int argc, char **argv)
 			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
 				{
-					if((outfd = open(optarg, O_WRONLY | O_TRUNC)) == EOF)
+					if((outfd = open(optarg, O_WRONLY | O_TRUNC | O_CREAT)) == EOF)
 					{
 						perror(optarg);
 						exit(8);
