@@ -37,7 +37,6 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <fcntl.h>
-#include <termios.h>
 
 #define KEYSIZE	256
 FILE *pwfile;
@@ -198,11 +197,11 @@ void parsearg(int argc, char **argv)
 				if(bufsize == 0)
 					panic("?BUFSIZE", 7);
 				break;
+			default:
 			case 'h': /* Help */
 				printf("Usage: %s [-h] [-i infile] [-s instr] [-o outfile] [-k key] [-p keyfile]\n", argv[0]);
 				exit(0);
-			default:
-				panic("?INVARG", 8);
+				break;
 		}
 	}
 }
