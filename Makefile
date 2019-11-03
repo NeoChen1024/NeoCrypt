@@ -1,5 +1,5 @@
 CC	= cc
-CFLAGS	= -O3 -finline -g3 -Wall -pipe -fPIE -fPIC -ansi -pedantic $(OPT)
+CFLAGS	= -O3 -finline -g3 -Wall -Wextra -pipe -fPIE -fPIC -std=c89 -pedantic $(OPT)
 EXE	= rc4
 
 .PHONY:	all countline clean
