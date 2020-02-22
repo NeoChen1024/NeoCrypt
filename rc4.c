@@ -47,8 +47,6 @@
 FILE *pwfile;
 uint8_t sbox[256];
 uint8_t key[KEYSIZE];
-char *str;
-size_t strlength=0;
 size_t keylength=0;
 uint8_t i=0, j=0;
 
@@ -65,11 +63,10 @@ int outfd;
 uint8_t status=0;
 #define ST_KEY_MASK	0x01
 #define ST_IN_MASK	0x02
-#define ST_INSTR_MASK	0x04
-#define ST_OUT_MASK	0x08
+#define ST_OUT_MASK	0x04
+
 #define ST_KEY		(status & ST_KEY_MASK)
 #define ST_IN		(status & ST_IN_MASK)
-#define ST_INSTR	(status & ST_INSTR_MASK)
 #define ST_OUT		(status & ST_OUT_MASK)
 
 INLINE void swap(uint8_t *a, uint8_t *b)
@@ -121,7 +118,7 @@ void panic(char *msg, int err)
 void parsearg(int argc, char **argv)
 {
 	int opt;
-	while((opt = getopt(argc, argv, "hs:i:o:k:p:b:")) != -1)
+	while((opt = getopt(argc, argv, "hi:o:k:p:b:")) != -1)
 	{
 		switch(opt)
 		{
@@ -137,18 +134,6 @@ void parsearg(int argc, char **argv)
 				else
 					infd=0;	/* stdin */
 				status |= ST_IN_MASK;
-				break;
-			case 's':	/* Input from argument */
-				strlength = strlen(optarg);
-				if(strlength == 0)
-					panic("?STR", 4);
-				if((str = calloc(strlength, sizeof(char))) == NULL)
-				{
-					perror("calloc()");
-					exit(8);
-				}
-				memcpy(str, optarg, strlength * sizeof(char));
-				status |= ST_INSTR_MASK;
 				break;
 			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
@@ -198,7 +183,7 @@ void parsearg(int argc, char **argv)
 				break;
 			default:
 			case 'h': /* Help */
-				printf("Usage: %s [-h] [-i infile] [-s instr] [-o outfile] [-k key] [-p keyfile] [-b bufsize]\n", argv[0]);
+				printf("Usage: %s [-h] [-i infile] [-o outfile] [-k key] [-p keyfile] [-b bufsize]\n", argv[0]);
 				exit(0);
 				break;
 		}
@@ -214,11 +199,9 @@ INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
 
 int main(int argc, char **argv)
 {
-	size_t len=0;
-
 	parsearg(argc, argv);
 
-	if(! (ST_KEY && (ST_IN || ST_INSTR) && ST_OUT))
+	if(! (ST_KEY && ST_IN && ST_OUT))
 	{
 		fputs("?ARG\n", stderr);
 		exit(8);
@@ -229,19 +212,11 @@ int main(int argc, char **argv)
 	inbuf	= calloc(bufsize, 1);
 	outbuf	= calloc(bufsize, 1);
 
-	if(ST_IN)
+	while((bufnbyte = read(infd, inbuf, bufsize)) > 0)
 	{
-		while((bufnbyte = read(infd, inbuf, bufsize)) > 0)
-		{
-			blkprga(inbuf, outbuf, bufnbyte);
-			write(outfd, outbuf, bufnbyte);
-		}
+		blkprga(inbuf, outbuf, bufnbyte);
+		write(outfd, outbuf, bufnbyte);
 	}
-	else if(ST_INSTR)
-	{
-		len = strlen(str);
-		blkprga((uint8_t *)str, outbuf, len);
-		write(outfd, outbuf, len);
-	}
+
 	return 0;
 }
