@@ -56,18 +56,13 @@ uint8_t *outbuf;
 ssize_t bufnbyte=0;
 size_t bufsize=(1<<18);
 
-/* File Descriptor */
-int infd;
-int outfd;
+/* Main I/O */
+FILE *in;
+FILE *out;
 
 uint8_t status=0;
-#define ST_KEY_MASK	0x01
-#define ST_IN_MASK	0x02
-#define ST_OUT_MASK	0x04
-
+#define ST_KEY_MASK	0x1
 #define ST_KEY		(status & ST_KEY_MASK)
-#define ST_IN		(status & ST_IN_MASK)
-#define ST_OUT		(status & ST_OUT_MASK)
 
 INLINE void swap(uint8_t *a, uint8_t *b)
 {
@@ -98,6 +93,13 @@ INLINE uint8_t prga(uint8_t *sbox)
 	return sbox[(sbox[i] + sbox[j]) & 0xFF];
 }
 
+INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
+{
+	size_t i=0;
+	for(i=0; i < bs; i++)
+		out[i] = in[i] ^ prga(sbox);
+}
+
 size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
 	size_t size=0;
@@ -109,11 +111,11 @@ size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 	return size;
 }
 
-void panic(char *msg, int err)
+void panic(char *msg)
 {
 	fputs(msg, stderr);
 	putc('\n', stderr);
-	exit(err);
+	exit(1);
 }
 
 void parsearg(int argc, char **argv)
@@ -126,29 +128,27 @@ void parsearg(int argc, char **argv)
 			case 'i':	/* Input from fd */
 				if(strcmp(optarg, "-"))
 				{
-					if((infd = open(optarg, O_RDONLY)) == EOF)
+					if((in = fopen(optarg, "rb")) == NULL)
 					{
 						perror(optarg);
 						exit(8);
 					}
 				}
 				else
-					infd=0;	/* stdin */
-				status |= ST_IN_MASK;
+					in=stdin;	/* stdin */
 				break;
 			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
 				{
 					/* if not "-" */
-					if((outfd = open(optarg, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR)) == EOF)
+					if((out = fopen(optarg, "wb+")) == NULL)
 					{
 						perror(optarg);
 						exit(8);
 					}
 				}
 				else
-					outfd=1;	/* stdout */
-				status |= ST_OUT_MASK;
+					out=stdout;	/* stdout */
 				break;
 			case 'k':	/* Key from argument */
 				strncpy((char*)key, optarg, KEYSIZE - 1);
@@ -168,59 +168,61 @@ void parsearg(int argc, char **argv)
 				else
 				{
 					pwfile=stdin;
-					if(infd == 0)	/* fd == stdin */
-						panic("?PWDIN", 6);
+					if(in == stdin)	/* fd == stdin */
+						panic("in == pwfile == stdin");
 
 					/* Prompt */
-					fputs("?PW=", stderr);
+					fputs("PASSWORD=", stderr);
 					keylength = readbyte(key, KEYSIZE, stdin);
 				}
 				status |= ST_KEY_MASK;
 				break;
 			case 'b':
+				bufsize = 0;
 				sscanf(optarg, "%lu", &bufsize);
 				if(bufsize == 0)
-					panic("?BUFSIZE", 7);
+					panic("Buffer size == 0");
 				break;
 			default:
 			case 'h': /* Help */
-				printf("Usage: %s [-h] [-i infile] [-o outfile] [-k key] [-p keyfile] [-b bufsize]\n", argv[0]);
+				fprintf(stderr, "Usage: %s [-h] [-i infile] [-o outfile] [-k key] [-p keyfile] [-b bufsize]\n", argv[0]);
 				exit(0);
 				break;
 		}
 	}
 }
 
-INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
-{
-	size_t i=0;
-	for(i=0; i < bs; i++)
-		out[i] = in[i] ^ prga(sbox);
-}
-
 int main(int argc, char **argv)
 {
-	setvbuf(stdin, NULL, _IONBF, 0);
+	setvbuf(stdin,  NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
+
+	in  = stdin;
+	out = stdout;
 
 	parsearg(argc, argv);
 
-	if(! (ST_KEY && ST_IN && ST_OUT))
-	{
-		fputs("?ARG\n", stderr);
-		exit(8);
-	}
+	setvbuf(in,  NULL, _IONBF, 0);
+	setvbuf(out, NULL, _IONBF, 0);
+
+	if(!ST_KEY)
+		panic("No key is given");
 
 	ksa(sbox, key, keylength);
 
 	inbuf	= malloc(bufsize);
 	outbuf	= malloc(bufsize);
 
-	while((bufnbyte = read(infd, inbuf, bufsize)) > 0)
+	while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
 	{
 		blkprga(inbuf, outbuf, bufnbyte);
-		write(outfd, outbuf, bufnbyte);
+		fwrite(outbuf, 1, bufnbyte, out);
 	}
+
+	if(ferror(in))
+		panic("in: I/O Error");
+	if(ferror(out))
+		panic("out: I/O Error");
 
 	free(inbuf);
 	free(outbuf);
