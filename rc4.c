@@ -79,7 +79,8 @@ INLINE void swap(uint8_t *a, uint8_t *b)
 
 void ksa(uint8_t *sbox, uint8_t *key, size_t len)
 {
-	int ksa_i=0, ksa_j=0;
+	unsigned int ksa_i=0, ksa_j=0;
+
 	for(ksa_i=0; ksa_i < (1<<8); ++ksa_i)
 		sbox[ksa_i]=ksa_i;
 	for(ksa_i=0; ksa_i < (1<<8); ++ksa_i)
@@ -101,9 +102,9 @@ size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
 	size_t size=0;
 	int input=0;
-	while(size < limit && input != EOF)
+	while((size < limit) && ((input = getc(fd)) != EOF))
 	{
-		dst[size++] = input = getc(fd);
+		dst[size++] = input;
 	}
 	return size;
 }
@@ -169,6 +170,8 @@ void parsearg(int argc, char **argv)
 					pwfile=stdin;
 					if(infd == 0)	/* fd == stdin */
 						panic("?PWDIN", 6);
+
+					/* Prompt */
 					fputs("?PW=", stderr);
 					keylength = readbyte(key, KEYSIZE, stdin);
 				}
@@ -210,14 +213,17 @@ int main(int argc, char **argv)
 
 	ksa(sbox, key, keylength);
 
-	inbuf	= calloc(bufsize, 1);
-	outbuf	= calloc(bufsize, 1);
+	inbuf	= malloc(bufsize);
+	outbuf	= malloc(bufsize);
 
 	while((bufnbyte = read(infd, inbuf, bufsize)) > 0)
 	{
 		blkprga(inbuf, outbuf, bufnbyte);
 		write(outfd, outbuf, bufnbyte);
 	}
+
+	free(inbuf);
+	free(outbuf);
 
 	return 0;
 }
