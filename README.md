@@ -1,10 +1,10 @@
-Neo_Chen's RC4 Cipher Implementation
-====================================
+RC4 Cipher in ANSI C99 (With some optimization)
+===============================================
 
 ![RC4 Logo](https://gitlab.com/Neo_Chen/RC4/raw/master/Logo.png "Yes, it has a logo")  
-Just a simple tool for **absolutely unsecure** encryption.  
-**WARNING!** This algorithm is completely outdated, do not use it to encrypt any sensitive data. (Might be a good scrambler to reduce repeated 0's though)
+Just a simple tool for an absolutely insecure encryption scheme.  
+**WARNING!** This algorithm is obsolete. Do not use it to encrypt any sensitive data. (Though it might be a good scrambler to hide repeated 0's though)
 
 ## Note
 
-This implementation is written with ANSI C99 (C89 if there's no inline), it should be portable (I guess)
+This implementation is written with ANSI C99 (C89 also works, but there will be no inline) and should be portable (I guess).
