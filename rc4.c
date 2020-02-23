@@ -1,5 +1,5 @@
 /* ========================================================================== *\
-||                          RC4 Implementation in C                           ||
+||                         RC4 Implementation in C99                          ||
 ||                                 Neo_Chen                                   ||
 \* ========================================================================== */
 
@@ -40,7 +40,7 @@
 #include <fcntl.h>
 
 #ifndef INLINE
-# define INLINE inline static
+#  define INLINE inline static
 #endif
 
 #define KEYSIZE	256
@@ -152,8 +152,6 @@ void parsearg(int argc, char **argv)
 			case 'k':	/* Key from argument */
 				strncpy((char*)key, optarg, KEYSIZE - 1);
 				keylength = strlen((char*)key);
-				if(keylength == 0)
-					panic("?KEY", 5);
 				status |= ST_KEY_MASK;
 				break;
 			case 'p':	/* Key from fd */
@@ -171,7 +169,7 @@ void parsearg(int argc, char **argv)
 					pwfile=stdin;
 					if(infd == 0)	/* fd == stdin */
 						panic("?PWDIN", 6);
-					fputs("?PW=", stdout);
+					fputs("?PW=", stderr);
 					keylength = readbyte(key, KEYSIZE, stdin);
 				}
 				status |= ST_KEY_MASK;
@@ -199,6 +197,9 @@ INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
 
 int main(int argc, char **argv)
 {
+	setvbuf(stdin, NULL, _IONBF, 0);
+	setvbuf(stdout, NULL, _IONBF, 0);
+
 	parsearg(argc, argv);
 
 	if(! (ST_KEY && ST_IN && ST_OUT))
