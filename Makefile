@@ -1,6 +1,10 @@
-CC	= cc
-CFLAGS	= -Ofast -g3 -Wall -Wextra -pipe -fPIE -fPIC -std=c99 -pedantic $(OPT)
-EXE	= rc4
+CC	=	cc
+# use xorswap
+#OPT	+=	-DXORSWAP
+# use loop unroll
+OPT	+=	-DUNROLL
+CFLAGS	=	-Ofast -g3 -Wall -Wextra -pipe -fPIE -std=c99 -pedantic $(OPT)
+EXE	=	rc4
 
 .PHONY:	all countline clean
 all: ${EXE}

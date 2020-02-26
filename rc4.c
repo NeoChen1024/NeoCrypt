@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -64,6 +65,9 @@ uint8_t status=0;
 #define ST_KEY_MASK	0x1
 #define ST_KEY		(status & ST_KEY_MASK)
 
+uint8_t verbose=0;
+
+#ifndef XORSWAP
 INLINE void swap(uint8_t *a, uint8_t *b)
 {
 	uint8_t temp=0;
@@ -71,6 +75,14 @@ INLINE void swap(uint8_t *a, uint8_t *b)
 	*a = *b;
 	*b = temp;
 }
+#else
+INLINE void swap(uint8_t *a, uint8_t *b)
+{
+	*a ^= *b;
+	*b ^= *a;
+	*a ^= *b;
+}
+#endif
 
 void ksa(uint8_t *sbox, uint8_t *key, size_t len)
 {
@@ -93,12 +105,42 @@ INLINE uint8_t prga(uint8_t *sbox)
 	return sbox[(sbox[i] + sbox[j]) & 0xFF];
 }
 
+#define PRGA(x) \
+	out[x] = in[x] ^ prga(sbox)
+
+#ifndef UNROLL
 INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
 {
 	size_t i=0;
 	for(i=0; i < bs; i++)
 		out[i] = in[i] ^ prga(sbox);
 }
+#else
+INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unroll */
+{
+	size_t i=0;
+	for(i=0; i < bs; i += 16)
+	{
+		PRGA(i + 0);
+		PRGA(i + 1);
+		PRGA(i + 2);
+		PRGA(i + 3);
+		PRGA(i + 4);
+		PRGA(i + 5);
+		PRGA(i + 6);
+		PRGA(i + 7);
+		PRGA(i + 8);
+		PRGA(i + 9);
+		PRGA(i + 10);
+		PRGA(i + 11);
+		PRGA(i + 12);
+		PRGA(i + 13);
+		PRGA(i + 14);
+		PRGA(i + 15);
+	}
+}
+#endif
+
 
 size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
@@ -118,10 +160,21 @@ void panic(char *msg)
 	exit(1);
 }
 
+void info(char *fmt, ...)
+{
+	va_list args;
+	va_start (args, fmt);
+	if(verbose > 0)
+	{
+		vfprintf(stderr, fmt, args);
+	}
+	va_end(args);
+}
+
 void parsearg(int argc, char **argv)
 {
 	int opt;
-	while((opt = getopt(argc, argv, "hi:o:k:p:b:")) != -1)
+	while((opt = getopt(argc, argv, "hi:o:k:p:b:v")) != -1)
 	{
 		switch(opt)
 		{
@@ -177,11 +230,16 @@ void parsearg(int argc, char **argv)
 				}
 				status |= ST_KEY_MASK;
 				break;
-			case 'b':
+			case 'b':	/* Buffer size in KiB */
 				bufsize = 0;
 				sscanf(optarg, "%lu", &bufsize);
 				if(bufsize == 0)
 					panic("Buffer size == 0");
+				else
+					bufsize <<= 10;
+				break;
+			case 'v':
+				verbose++;
 				break;
 			default:
 			case 'h': /* Help */
@@ -194,6 +252,7 @@ void parsearg(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
+	info("RC4 Cipher Utility\n");
 	setvbuf(stdin,  NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -201,6 +260,7 @@ int main(int argc, char **argv)
 	out = stdout;
 
 	parsearg(argc, argv);
+	info("bufsize = %zdK\n", bufsize >> 10);
 
 	setvbuf(in,  NULL, _IONBF, 0);
 	setvbuf(out, NULL, _IONBF, 0);
@@ -209,10 +269,12 @@ int main(int argc, char **argv)
 		panic("No key is given");
 
 	ksa(sbox, key, keylength);
+	info("KSA Done\n");
 
-	inbuf	= malloc(bufsize);
-	outbuf	= malloc(bufsize);
+	inbuf = malloc(bufsize);
+	outbuf = malloc(bufsize);
 
+	info("Entering Bulk-PRGA Loop\n");
 	while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
 	{
 		blkprga(inbuf, outbuf, bufnbyte);
@@ -224,8 +286,11 @@ int main(int argc, char **argv)
 	if(ferror(out))
 		panic("out: I/O Error");
 
+	/* Final clean-up */
+	info("Clean-up\n");
+	fclose(in);
+	fclose(out);
 	free(inbuf);
 	free(outbuf);
-
 	return 0;
 }
