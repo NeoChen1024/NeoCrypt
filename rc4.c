@@ -290,10 +290,9 @@ int main(int argc, char **argv)
 	{
 		blkprga(inbuf, outbuf, bufnbyte);
 		if(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte)
-			goto ioerror;
+			break;
 	}
 
-ioerror:
 	if(ferror(in))
 		perror(infile);
 	if(ferror(out))
