@@ -30,11 +30,17 @@
 ||   For more information, please refer to <http://unlicense.org/>            ||
 \* ========================================================================== */
 
+/* Use POSIX C Source */
+#ifndef _POSIX_C_SOURCE
+#  define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
+#include <limits.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/stat.h>
@@ -54,12 +60,14 @@ uint8_t i=0, j=0;
 /* Bulk IO */
 uint8_t *inbuf;
 uint8_t *outbuf;
-ssize_t bufnbyte=0;
+size_t bufnbyte=0;
 size_t bufsize=(1<<18);
 
 /* Main I/O */
 FILE *in;
 FILE *out;
+char infile[PATH_MAX];
+char outfile[PATH_MAX];
 
 uint8_t status=0;
 #define ST_KEY_MASK	0x1
@@ -178,9 +186,10 @@ void parsearg(int argc, char **argv)
 	{
 		switch(opt)
 		{
-			case 'i':	/* Input from fd */
+			case 'i':	/* Input */
 				if(strcmp(optarg, "-"))
 				{
+					/* if not "-" */
 					if((in = fopen(optarg, "rb")) == NULL)
 					{
 						perror(optarg);
@@ -189,6 +198,7 @@ void parsearg(int argc, char **argv)
 				}
 				else
 					in=stdin;	/* stdin */
+				strncpy(infile, optarg, PATH_MAX - 1);
 				break;
 			case 'o':	/* Output */
 				if(strcmp(optarg, "-"))
@@ -202,6 +212,7 @@ void parsearg(int argc, char **argv)
 				}
 				else
 					out=stdout;	/* stdout */
+				strncpy(outfile, optarg, PATH_MAX - 1);
 				break;
 			case 'k':	/* Key from argument */
 				strncpy((char*)key, optarg, KEYSIZE - 1);
@@ -278,13 +289,15 @@ int main(int argc, char **argv)
 	while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
 	{
 		blkprga(inbuf, outbuf, bufnbyte);
-		fwrite(outbuf, 1, bufnbyte, out);
+		if(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte)
+			goto ioerror;
 	}
 
+ioerror:
 	if(ferror(in))
-		panic("in: I/O Error");
+		perror(infile);
 	if(ferror(out))
-		panic("out: I/O Error");
+		perror(outfile);
 
 	/* Final clean-up */
 	info("Clean-up\n");
