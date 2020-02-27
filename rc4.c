@@ -107,10 +107,10 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t len)
 
 INLINE uint8_t prga(uint8_t *sbox)
 {
-	i = (i + 1) & 0xFF;
-	j = (j + sbox[i]) & 0xFF;
+	i = (i + 1);
+	j = (j + sbox[i]);
 	swap(sbox + i, sbox + j);
-	return sbox[(sbox[i] + sbox[j]) & 0xFF];
+	return sbox[(uint8_t)(sbox[i] + sbox[j])];
 }
 
 #define PRGA(x) \
