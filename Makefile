@@ -4,7 +4,7 @@ CC	=	cc
 # use loop unroll
 OPT	+=	-DUNROLL
 CFLAGS	=	-Ofast -g3 -Wall -Wextra -pipe -fPIE -std=c99 -pedantic $(OPT)
-EXE	=	rc4
+EXE	=	rc4crypt
 
 .PHONY:	all countline clean
 all: ${EXE}
