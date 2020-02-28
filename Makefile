@@ -1,14 +1,14 @@
 CC	=	cc
-# use xorswap
-#OPT	+=	-DXORSWAP
 # use loop unroll
 OPT	+=	-DUNROLL
 CFLAGS	=	-Ofast -g3 -Wall -Wextra -pipe -fPIE -std=c99 -pedantic $(OPT)
 EXE	=	rc4crypt
 
-.PHONY:	all countline clean
+.PHONY:	all loc clean test
 all: ${EXE}
-countline:
-	wc -l *.c
+test:
+	@./test.sh
+loc:
+	wc -l *.c *.h
 clean:
 	-rm -f ${EXE}

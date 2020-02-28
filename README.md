@@ -7,4 +7,4 @@ Just a simple tool for an absolutely insecure encryption scheme.
 
 ## Note
 
-This implementation is written in ANSI C99 (C89 also works, but there will be no inline) and should be portable (I guess).
+This implementation is written in ANSI C99 (C89 also works, but there will be no inline) with POSIX.1 and should be portable (I guess).

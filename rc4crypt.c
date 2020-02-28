@@ -32,7 +32,7 @@
 
 /* Use POSIX C Source */
 #ifndef _POSIX_C_SOURCE
-#  define _POSIX_C_SOURCE 200809L
+#  define _POSIX_C_SOURCE 1
 #endif
 
 #include <stdio.h>
@@ -46,8 +46,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifndef INLINE
+#if INLINE && __GNUC_STDC_INLINE__
 #  define INLINE inline static
+#else
+#  define INLINE
 #endif
 
 #define KEYSIZE	256
@@ -55,7 +57,7 @@ FILE *pwfile;
 uint8_t sbox[256];
 uint8_t key[KEYSIZE];
 size_t keylength=0;
-uint8_t i=0, j=0;
+uint8_t rc4_i=0, rc4_j=0;
 
 /* Bulk IO */
 uint8_t *inbuf;
@@ -75,7 +77,6 @@ uint8_t status=0;
 
 uint8_t verbose=0;
 
-#ifndef XORSWAP
 INLINE void swap(uint8_t *a, uint8_t *b)
 {
 	uint8_t temp=0;
@@ -83,14 +84,6 @@ INLINE void swap(uint8_t *a, uint8_t *b)
 	*a = *b;
 	*b = temp;
 }
-#else
-INLINE void swap(uint8_t *a, uint8_t *b)
-{
-	*a ^= *b;
-	*b ^= *a;
-	*a ^= *b;
-}
-#endif
 
 void ksa(uint8_t *sbox, uint8_t *key, size_t len)
 {
@@ -107,10 +100,9 @@ void ksa(uint8_t *sbox, uint8_t *key, size_t len)
 
 INLINE uint8_t prga(uint8_t *sbox)
 {
-	i = (i + 1);
-	j = (j + sbox[i]);
-	swap(sbox + i, sbox + j);
-	return sbox[(uint8_t)(sbox[i] + sbox[j])];
+	rc4_j += sbox[++rc4_i];
+	swap(sbox + rc4_i, sbox + rc4_j);
+	return sbox[(uint8_t)(sbox[rc4_i] + sbox[rc4_j])];
 }
 
 #define PRGA(x) \
