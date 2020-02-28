@@ -104,11 +104,11 @@ static void rc4_ksa(uint8_t *s, uint8_t *key, size_t len)
 	}
 }
 
-INLINE uint8_t rc4_prga(uint8_t *sbox)
+INLINE uint8_t rc4_prga(uint8_t *s)
 {
-	rc4_j += rc4_sbox[++rc4_i];
-	swap(sbox + rc4_i, rc4_sbox + rc4_j);
-	return sbox[(uint8_t)(sbox[rc4_i] + sbox[rc4_j])];
+	rc4_j += s[++rc4_i];
+	swap(s + rc4_i, s + rc4_j);
+	return s[(uint8_t)(s[rc4_i] + s[rc4_j])];
 }
 
 #define PRGA(x) \

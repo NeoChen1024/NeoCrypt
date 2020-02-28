@@ -1,5 +1,5 @@
-RC4 Cipher in ANSI C99 (With some optimization)
-===============================================
+RC4crypt: A RC4 Cipher in ANSI C
+================================
 
 ![RC4 Logo](https://gitlab.com/Neo_Chen/RC4/raw/master/Logo.png "Yes, it has a logo")  
 Just a simple tool for an absolutely insecure encryption scheme.  
