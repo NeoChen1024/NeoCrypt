@@ -54,10 +54,15 @@
 
 #define KEYSIZE	256
 FILE *pwfile;
-uint8_t sbox[256];
 uint8_t key[KEYSIZE];
 size_t keylength=0;
+
+/* RC4 variables */
+uint8_t rc4_sbox[256];
 uint8_t rc4_i=0, rc4_j=0;
+
+/* Spritz variables */
+uint8_t rc4_sbox[256];
 
 /* Bulk IO */
 uint8_t *inbuf;
@@ -85,38 +90,39 @@ INLINE void swap(uint8_t *a, uint8_t *b)
 	*b = temp;
 }
 
-void ksa(uint8_t *sbox, uint8_t *key, size_t len)
+/* RC4 core routine */
+static void rc4_ksa(uint8_t *s, uint8_t *key, size_t len)
 {
 	unsigned int ksa_i=0, ksa_j=0;
 
 	for(ksa_i=0; ksa_i < (1<<8); ++ksa_i)
-		sbox[ksa_i]=ksa_i;
+		s[ksa_i]=ksa_i;
 	for(ksa_i=0; ksa_i < (1<<8); ++ksa_i)
 	{
-		ksa_j = (ksa_j + sbox[ksa_i] + key[ksa_i % len]) & 0xFF;
-		swap(sbox + ksa_i, sbox + ksa_j);
+		ksa_j = (ksa_j + s[ksa_i] + key[ksa_i % len]) & 0xFF;
+		swap(s + ksa_i, s + ksa_j);
 	}
 }
 
-INLINE uint8_t prga(uint8_t *sbox)
+INLINE uint8_t rc4_prga(uint8_t *sbox)
 {
-	rc4_j += sbox[++rc4_i];
-	swap(sbox + rc4_i, sbox + rc4_j);
+	rc4_j += rc4_sbox[++rc4_i];
+	swap(sbox + rc4_i, rc4_sbox + rc4_j);
 	return sbox[(uint8_t)(sbox[rc4_i] + sbox[rc4_j])];
 }
 
 #define PRGA(x) \
-	out[x] = in[x] ^ prga(sbox)
+	out[x] = in[x] ^ rc4_prga(rc4_sbox)
 
 #ifndef UNROLL
-INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)
+INLINE void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)
 {
 	size_t i=0;
 	for(i=0; i < bs; i++)
-		out[i] = in[i] ^ prga(sbox);
+		out[i] = in[i] ^ rc4_prga(sbox);
 }
 #else
-INLINE void blkprga(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unroll */
+INLINE void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unroll */
 {
 	size_t i=0;
 	for(i=0; i < bs; i += 16)
@@ -271,7 +277,7 @@ int main(int argc, char **argv)
 	if(!ST_KEY)
 		panic("No key is given");
 
-	ksa(sbox, key, keylength);
+	rc4_ksa(rc4_sbox, key, keylength);
 	info("KSA Done\n");
 
 	inbuf = malloc(bufsize);
@@ -280,7 +286,7 @@ int main(int argc, char **argv)
 	info("Entering Bulk-PRGA Loop\n");
 	while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
 	{
-		blkprga(inbuf, outbuf, bufnbyte);
+		rc4_blkprga(inbuf, outbuf, bufnbyte);
 		if(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte)
 			break;
 	}
