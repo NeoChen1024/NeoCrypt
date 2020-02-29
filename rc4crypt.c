@@ -61,8 +61,12 @@ size_t keylength=0;
 uint8_t rc4_sbox[256];
 uint8_t rc4_i=0, rc4_j=0;
 
-/* Spritz variables */
-uint8_t rc4_sbox[256];
+/* algorithm selection */
+static void (*blkenc)(uint8_t *in, uint8_t *out, size_t bs);
+enum algo
+{
+	RC4
+} algo;
 
 /* Bulk IO */
 uint8_t *inbuf;
@@ -111,7 +115,7 @@ INLINE uint8_t rc4_prga(uint8_t *s)
 	return s[(uint8_t)(s[rc4_i] + s[rc4_j])];
 }
 
-#define PRGA(x) \
+#define RC4_PRGA(x) \
 	out[x] = in[x] ^ rc4_prga(rc4_sbox)
 
 #ifndef UNROLL
@@ -122,31 +126,31 @@ INLINE void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)
 		out[i] = in[i] ^ rc4_prga(sbox);
 }
 #else
-INLINE void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unroll */
+static void rc4_blkenc(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unroll */
 {
 	size_t i=0;
 	for(i=0; i < bs; i += 16)
 	{
-		PRGA(i + 0);
-		PRGA(i + 1);
-		PRGA(i + 2);
-		PRGA(i + 3);
-		PRGA(i + 4);
-		PRGA(i + 5);
-		PRGA(i + 6);
-		PRGA(i + 7);
-		PRGA(i + 8);
-		PRGA(i + 9);
-		PRGA(i + 10);
-		PRGA(i + 11);
-		PRGA(i + 12);
-		PRGA(i + 13);
-		PRGA(i + 14);
-		PRGA(i + 15);
+		RC4_PRGA(i + 0);
+		RC4_PRGA(i + 1);
+		RC4_PRGA(i + 2);
+		RC4_PRGA(i + 3);
+		RC4_PRGA(i + 4);
+		RC4_PRGA(i + 5);
+		RC4_PRGA(i + 6);
+		RC4_PRGA(i + 7);
+		RC4_PRGA(i + 8);
+		RC4_PRGA(i + 9);
+		RC4_PRGA(i + 10);
+		RC4_PRGA(i + 11);
+		RC4_PRGA(i + 12);
+		RC4_PRGA(i + 13);
+		RC4_PRGA(i + 14);
+		RC4_PRGA(i + 15);
 	}
 }
 #endif
-
+#undef RC4_PRGA
 
 size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
@@ -180,10 +184,18 @@ void info(char *fmt, ...)
 void parsearg(int argc, char **argv)
 {
 	int opt;
-	while((opt = getopt(argc, argv, "hi:o:k:p:b:v")) != -1)
+	while((opt = getopt(argc, argv, "ha:i:o:k:p:b:v")) != -1)
 	{
 		switch(opt)
 		{
+			case 'a':	/* Algorithm */
+				if(strcmp(optarg, "rc4") == 0)
+				{
+					algo = RC4;
+				}
+				else
+					panic("Invalid Algortihm Name");
+				break;
 			case 'i':	/* Input */
 				if(strcmp(optarg, "-"))
 				{
@@ -262,11 +274,14 @@ void parsearg(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	info("RC4 Cipher Utility\n");
+
+	/* Initialize Defaults */
 	setvbuf(stdin,  NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	in  = stdin;
 	out = stdout;
+	algo = RC4;
 
 	parsearg(argc, argv);
 	info("bufsize = %zdK\n", bufsize >> 10);
@@ -277,16 +292,25 @@ int main(int argc, char **argv)
 	if(!ST_KEY)
 		panic("No key is given");
 
-	rc4_ksa(rc4_sbox, key, keylength);
+	switch(algo)
+	{
+		case RC4:
+			blkenc = rc4_blkenc;
+			rc4_ksa(rc4_sbox, key, keylength);
+			break;
+		default:
+			panic("Invalid Key Algorithm");
+	}
+
 	info("KSA Done\n");
 
 	inbuf = malloc(bufsize);
 	outbuf = malloc(bufsize);
 
-	info("Entering Bulk-PRGA Loop\n");
+	info("Entering Bulk-Encrypt Loop\n");
 	while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
 	{
-		rc4_blkprga(inbuf, outbuf, bufnbyte);
+		blkenc(inbuf, outbuf, bufnbyte);
 		if(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte)
 			break;
 	}
