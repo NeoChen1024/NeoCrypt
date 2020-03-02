@@ -46,10 +46,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if INLINE && __GNUC_STDC_INLINE__
-#  define INLINE inline static
+#if INLINE && ( __GNUC_STDC_INLINE__ || (!__NO_INLINE__))
+#  define _INLINE inline static
 #else
-#  define INLINE
+#  define _INLINE
 #endif
 
 #define KEYSIZE	256
@@ -86,7 +86,7 @@ uint8_t status=0;
 
 uint8_t verbose=0;
 
-INLINE void swap(uint8_t *a, uint8_t *b)
+_INLINE void swap(uint8_t *a, uint8_t *b)
 {
 	uint8_t temp=0;
 	temp = *a;
@@ -108,7 +108,7 @@ static void rc4_ksa(uint8_t *s, uint8_t *key, size_t len)
 	}
 }
 
-INLINE uint8_t rc4_prga(uint8_t *s)
+_INLINE uint8_t rc4_prga(uint8_t *s)
 {
 	rc4_j += s[++rc4_i];
 	swap(s + rc4_i, s + rc4_j);
@@ -119,7 +119,7 @@ INLINE uint8_t rc4_prga(uint8_t *s)
 	out[x] = in[x] ^ rc4_prga(rc4_sbox)
 
 #ifndef UNROLL
-INLINE void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)
+static void rc4_blkprga(uint8_t *in, uint8_t *out, size_t bs)
 {
 	size_t i=0;
 	for(i=0; i < bs; i++)
