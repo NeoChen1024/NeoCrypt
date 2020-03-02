@@ -1,5 +1,5 @@
 /* ========================================================================== *\
-||                         RC4 Implementation in C99                          ||
+||                       RC4 Implementation in ANSI C                         ||
 ||                                 Neo_Chen                                   ||
 \* ========================================================================== */
 
@@ -37,7 +37,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
 #include <limits.h>
@@ -46,7 +45,19 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#if INLINE && ( __GNUC_STDC_INLINE__ || (!__NO_INLINE__))
+/* Non-C99 systems might not have stdint.h */
+#ifdef __STDC__
+#  ifdef __STDC_VERSION__
+#    if (__STDC_VERSION__ >= 199901L)
+#      include <stdint.h>
+#    else
+typedef unsigned char uint8_t;
+#    endif
+#  endif
+#endif
+
+/* Check if inline is supported */
+#if INLINE && __GNUC_STDC_INLINE__
 #  define _INLINE inline static
 #else
 #  define _INLINE
@@ -253,7 +264,7 @@ void parsearg(int argc, char **argv)
 				break;
 			case 'b':	/* Buffer size in KiB */
 				bufsize = 0;
-				sscanf(optarg, "%lu", &bufsize);
+				sscanf(optarg, "%zu", &bufsize);
 				if(bufsize == 0)
 					panic("Buffer size == 0");
 				else
