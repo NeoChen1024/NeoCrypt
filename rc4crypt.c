@@ -46,16 +46,12 @@
 #include <fcntl.h>
 
 /* Non-C99 systems might not have stdint.h */
-#ifdef __STDC__
-#  ifdef __STDC_VERSION__
-#    if (__STDC_VERSION__ >= 199901L)
-#      include <stdint.h>
-#      define SIZE_F	"%zu"
-#    else
-       typedef unsigned char uint8_t;
-#      define SIZE_F	"%u"
-#    endif
-#  endif
+#if (__STDC_VERSION__ >= 199901L)
+#    include <stdint.h>
+#    define SIZE_F	"%zu"
+#else
+     typedef unsigned char uint8_t;
+#    define SIZE_F	"%u"
 #endif
 
 /* Check if inline is supported */
