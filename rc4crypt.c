@@ -50,8 +50,10 @@
 #  ifdef __STDC_VERSION__
 #    if (__STDC_VERSION__ >= 199901L)
 #      include <stdint.h>
+#      define SIZE_F	"%zu"
 #    else
-typedef unsigned char uint8_t;
+       typedef unsigned char uint8_t;
+#      define SIZE_F	"%u"
 #    endif
 #  endif
 #endif
@@ -264,7 +266,7 @@ void parsearg(int argc, char **argv)
 				break;
 			case 'b':	/* Buffer size in KiB */
 				bufsize = 0;
-				sscanf(optarg, "%zu", &bufsize);
+				sscanf(optarg, SIZE_F, &bufsize);
 				if(bufsize == 0)
 					panic("Buffer size == 0");
 				else
@@ -295,7 +297,7 @@ int main(int argc, char **argv)
 	algo = RC4;
 
 	parsearg(argc, argv);
-	info("bufsize = %zdK\n", bufsize >> 10);
+	info("bufsize = " SIZE_F "K\n", bufsize >> 10);
 
 	setvbuf(in,  NULL, _IONBF, 0);
 	setvbuf(out, NULL, _IONBF, 0);
