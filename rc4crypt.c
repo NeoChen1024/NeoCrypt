@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
 #include <limits.h>
@@ -44,15 +45,6 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-/* Non-C99 systems might not have stdint.h */
-#if (__STDC_VERSION__ >= 199901L)
-#    include <stdint.h>
-#    define SIZE_F	"%zu"
-#else
-     typedef unsigned char uint8_t;
-#    define SIZE_F	"%u"
-#endif
 
 /* Check if inline is supported */
 #if INLINE && __GNUC_STDC_INLINE__
@@ -161,6 +153,8 @@ static void rc4_blkenc(uint8_t *in, uint8_t *out, size_t bs)	/* 16-fold loop unr
 #endif
 #undef RC4_PRGA
 
+/* Spritz core routines from https://githb.com/cuhsat/spritz.c */
+
 size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 {
 	size_t size=0;
@@ -262,7 +256,7 @@ void parsearg(int argc, char **argv)
 				break;
 			case 'b':	/* Buffer size in KiB */
 				bufsize = 0;
-				sscanf(optarg, SIZE_F, &bufsize);
+				sscanf(optarg, "%zu", &bufsize);
 				if(bufsize == 0)
 					panic("Buffer size == 0");
 				else
@@ -293,7 +287,7 @@ int main(int argc, char **argv)
 	algo = RC4;
 
 	parsearg(argc, argv);
-	info("bufsize = " SIZE_F "K\n", bufsize >> 10);
+	info("bufsize = %zuK\n", bufsize >> 10);
 
 	setvbuf(in,  NULL, _IONBF, 0);
 	setvbuf(out, NULL, _IONBF, 0);

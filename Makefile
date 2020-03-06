@@ -9,6 +9,6 @@ all: ${EXE}
 test:
 	@./test.sh
 loc:
-	wc -l *.c *.h
+	wc -l *.c
 clean:
 	-rm -f ${EXE}
