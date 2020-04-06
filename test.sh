@@ -12,7 +12,7 @@ response()
 }
 
 msg_echo "Crude test"
-./rc4crypt -i "rc4crypt" -o "a" -k "TEST"
-./rc4crypt -i "a" -o "b" -k "TEST"
-cmp "rc4crypt" "b" && response "PASS" || response "FAIL"
+./neocrypt -i "neocrypt" -o "a" -k "TEST"
+./neocrypt -i "a" -o "b" -k "TEST"
+cmp "neocrypt" "b" && response "PASS" || response "FAIL"
 rm -f "a" "b"
