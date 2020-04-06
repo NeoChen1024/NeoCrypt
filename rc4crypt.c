@@ -384,7 +384,7 @@ int main(int argc, char **argv)
 				crc = crc32_update(crc, inbuf, bufnbyte);
 
 			crc = crc32_end(crc);
-			fprintf(stdout, "CRC32 = %#08x\n", crc);
+			fprintf(stdout, "CRC32 = 0x%08X\n", crc);
 			break;
 		case RC4:
 		default:
