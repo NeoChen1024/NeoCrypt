@@ -310,9 +310,6 @@ int main(int argc, char **argv)
 	info("RC4 Cipher Utility\n");
 
 	/* Initialize Defaults */
-	setvbuf(stdin,  NULL, _IONBF, 0);
-	setvbuf(stdout, NULL, _IONBF, 0);
-
 	in  = stdin;
 	out = stdout;
 	algo = RC4;
@@ -322,8 +319,9 @@ int main(int argc, char **argv)
 	parsearg(argc, argv);
 	info("bufsize = %zuK\n", bufsize >> 10);
 
-	setvbuf(in,  NULL, _IONBF, 0);
-	setvbuf(out, NULL, _IONBF, 0);
+	/* Initialize Buffers */
+	setvbuf(in,  calloc(bufsize, sizeof(char)), _IOFBF, bufsize);
+	setvbuf(out, calloc(bufsize, sizeof(char)), _IOFBF, bufsize);
 
 	if(!ST_KEY && algo == RC4)
 		panic("No key is given");
