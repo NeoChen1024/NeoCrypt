@@ -1,7 +1,7 @@
 CC	=	cc
 # use inline
 OPT	+=	-DINLINE -DLE
-CFLAGS	=	-O2 -g -Wall -Wextra -pipe -std=c99 -pedantic $(OPT)
+CFLAGS	=	-O2 -g -Wall -Wextra -pipe -static -std=c99 -pedantic $(OPT)
 EXE	=	neocrypt
 
 .PHONY:	all loc clean test
