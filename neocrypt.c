@@ -88,6 +88,33 @@ uint8_t status=0;
 
 uint8_t verbose=0;
 
+void panic(char *msg)
+{
+	fputs(msg, stderr);
+	putc('\n', stderr);
+	exit(1);
+}
+
+void info(char *fmt, ...)
+{
+	va_list args;
+	va_start (args, fmt);
+	if(verbose > 0)
+	{
+		vfprintf(stderr, fmt, args);
+	}
+	va_end(args);
+}
+
+void *allocate(size_t size)
+{
+	void *ptr = malloc(size);
+	if(ptr == NULL)
+		panic("Memory allocate error");
+	memset(ptr, 0, size);
+	return ptr;
+}
+
 _INLINE void swap(uint8_t *a, uint8_t *b)
 {
 	uint8_t temp=0;
@@ -231,24 +258,6 @@ size_t readbyte(uint8_t *dst, size_t limit, FILE *fd)
 	return size;
 }
 
-void panic(char *msg)
-{
-	fputs(msg, stderr);
-	putc('\n', stderr);
-	exit(1);
-}
-
-void info(char *fmt, ...)
-{
-	va_list args;
-	va_start (args, fmt);
-	if(verbose > 0)
-	{
-		vfprintf(stderr, fmt, args);
-	}
-	va_end(args);
-}
-
 void parsearg(int argc, char **argv)
 {
 	int opt;
@@ -354,8 +363,8 @@ int main(int argc, char **argv)
 	info("bufsize = %zuK\n", bufsize >> 10);
 
 	/* Initialize Buffers */
-	setvbuf(in,  calloc(bufsize, sizeof(char)), _IOFBF, bufsize);
-	setvbuf(out, calloc(bufsize, sizeof(char)), _IOFBF, bufsize);
+	setvbuf(in,  allocate(bufsize * sizeof(char)), _IOFBF, bufsize);
+	setvbuf(out, allocate(bufsize * sizeof(char)), _IOFBF, bufsize);
 
 	if(!ST_KEY && algo == RC4)
 		panic("No key is given");
@@ -379,8 +388,8 @@ int main(int argc, char **argv)
 
 	info("Init Done\n");
 
-	inbuf = malloc(bufsize);
-	outbuf = malloc(bufsize);
+	inbuf = allocate(bufsize);
+	outbuf = allocate(bufsize);
 
 	info("Entering Bulk-Operation Loop\n");
 	switch(algo)
