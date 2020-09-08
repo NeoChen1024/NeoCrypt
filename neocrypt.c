@@ -51,6 +51,14 @@
 #  define _INLINE
 #endif
 
+#ifdef EXPECT_MACRO
+#  define likely(x)	__builtin_expect(!!(x), 1)
+#  define unlikely(x)	__builtin_expect(!!(x), 0)
+#else
+#  define likely(x)	(x)
+#  define unlikely(x)	(x)
+#endif
+
 typedef uint32_t crc32_t;
 
 #define KEYSIZE	256
@@ -147,7 +155,7 @@ _INLINE uint8_t rc4_prga(uint8_t *s)
 static void rc4_blkenc(uint8_t *in, uint8_t *out, size_t bs)
 {
 	size_t i=0;
-	for(i=0; i < bs; i++)
+	for(i=0; likely(i < bs); i++)
 		out[i] = in[i] ^ rc4_prga(rc4_sbox);
 }
 
@@ -205,7 +213,7 @@ _INLINE crc32_t crc32_update(crc32_t crc, const uint8_t *data, size_t len)
 	uint8_t index=0;
 	size_t i=0;
 
-	for(i = 0; i < len; i++)
+	for(i = 0; likely(i < len); i++)
 	{
 		index = crc ^ *data;
 		crc = crc32_table[index] ^ (crc >> 8);
@@ -237,12 +245,12 @@ void crc32_init(uint32_t* table, uint32_t* wtable) {
 void crc32_update(uint32_t *table, uint32_t *wtable, const void* data, size_t n_bytes, uint32_t* crc) {
 	size_t n_accum = n_bytes/sizeof(crc32_t);
 	size_t i = 0, j = 0;
-	for(i = 0; i < n_accum; ++i) {
+	for(i = 0; likely(i < n_accum); ++i) {
 		crc32_t a = *crc ^ ((crc32_t*)data)[i];
 		for(j = *crc = 0; j < sizeof(crc32_t); ++j)
 			*crc ^= wtable[(j << 8) + (uint8_t)(a >> 8*j)];
 	}
-	for(i = n_accum*sizeof(crc32_t); i < n_bytes; ++i)
+	for(i = n_accum*sizeof(crc32_t); likely(i < n_bytes); ++i)
 		*crc = table[(uint8_t)*crc ^ ((uint8_t*)data)[i]] ^ *crc >> 8;
 }
 #endif
@@ -395,7 +403,7 @@ int main(int argc, char **argv)
 	switch(algo)
 	{
 		case CRC32:
-			while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
+			while(likely((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0))
 #ifndef LE
 				crc = crc32_update(crc, inbuf, bufnbyte);
 
@@ -407,10 +415,10 @@ int main(int argc, char **argv)
 			break;
 		case RC4:
 		default:
-			while((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0)
+			while(likely((bufnbyte = fread(inbuf, 1, bufsize, in)) != 0))
 			{
 				blkenc(inbuf, outbuf, bufnbyte);
-				if(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte)
+				if(unlikely(fwrite(outbuf, 1, bufnbyte, out) != bufnbyte))
 						break;
 			}
 			break;

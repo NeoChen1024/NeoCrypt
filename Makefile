@@ -1,6 +1,6 @@
 CC	=	cc
 # use inline
-OPT	+=	-DINLINE -DLE
+OPT	+=	-DINLINE -DLE -DEXPECT_MACRO
 CFLAGS	=	-O2 -g -Wall -Wextra -pipe -static -std=c99 -pedantic $(OPT)
 EXE	=	neocrypt
 
