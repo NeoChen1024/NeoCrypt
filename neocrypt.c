@@ -364,15 +364,10 @@ int main(int argc, char **argv)
 	in  = stdin;
 	out = stdout;
 	algo = RC4;
-
 	crc32_t crc=0;
 
 	parsearg(argc, argv);
 	info("bufsize = %zuK\n", bufsize >> 10);
-
-	/* Initialize Buffers */
-	setvbuf(in,  allocate(bufsize * sizeof(char)), _IOFBF, bufsize);
-	setvbuf(out, allocate(bufsize * sizeof(char)), _IOFBF, bufsize);
 
 	if(!ST_KEY && algo == RC4)
 		panic("No key is given");
