@@ -79,14 +79,14 @@ enum algo
 } algo;
 
 /* Bulk IO */
-uint8_t *inbuf;
-uint8_t *outbuf;
+uint8_t * restrict inbuf;
+uint8_t * restrict outbuf;
 size_t bufnbyte=0;
 size_t bufsize=(1<<18);
 
 /* Main I/O */
-FILE *in;
-FILE *out;
+FILE * restrict in;
+FILE * restrict out;
 char infile[PATH_MAX];
 char outfile[PATH_MAX];
 
@@ -123,7 +123,7 @@ void *allocate(size_t size)
 	return ptr;
 }
 
-_INLINE void swap(uint8_t *a, uint8_t *b)
+_INLINE void swap(uint8_t * restrict a, uint8_t * restrict b)
 {
 	uint8_t temp=0;
 	temp = *a;
@@ -145,14 +145,14 @@ static void rc4_ksa(uint8_t *s, uint8_t *key, size_t len)
 	}
 }
 
-_INLINE uint8_t rc4_prga(uint8_t *s)
+_INLINE uint8_t rc4_prga(uint8_t * restrict s)
 {
 	rc4_j += s[++rc4_i];
 	swap(s + rc4_i, s + rc4_j);
 	return s[(uint8_t)(s[rc4_i] + s[rc4_j])];
 }
 
-static void rc4_blkenc(uint8_t *in, uint8_t *out, size_t bs)
+static void rc4_blkenc(uint8_t * restrict in, uint8_t * restrict out, size_t bs)
 {
 	size_t i=0;
 	for(i=0; likely(i < bs); i++)
